@@ -90,6 +90,16 @@
 > ⚠️ **工程路径不能含中文** —— hvigor 会硬性拒绝。
 > 所以工作区里的 `project/` 是**源码正本**，构建时要同步到纯英文路径。
 
+### 从零开始（克隆后第一次）
+
+```bash
+cd project/carbon-footprint
+ohpm install        # 从 oh-package-lock.json5 还原依赖（目前只有图表库 @ohos/mpchart）
+```
+
+> 这一步的路径也**必须不含中文**（同样是因为 hvigor）。
+> 依赖只有 `@ohos/mpchart` 一个，还原后即可完全离线构建。
+
 ### 构建（不需要设备）
 
 ```bash
@@ -98,6 +108,10 @@ tools/preview.sh build          # 同步到 /tmp 构建 → 本地签名 → 产
 
 它做三件事：把源码同步到 `/tmp/carbon-footprint`（纯英文路径）、调用 hvigor 构建、
 再用 SDK 自带的调试签名材料做本地签名 —— **全程不需要登录华为账号**。
+
+> ✅ **已验证**：把仓库克隆到一个空目录、只跑 `ohpm install` + `./hvigorw assembleHap`，
+> 可以成功产出 HAP；`tools/test-logic.sh` 与 `tools/icon/check_icons.py` 也全绿。
+> 也就是说**仓库是自包含的**，不依赖任何本地遗留状态。
 
 ### 跑到模拟器上
 
