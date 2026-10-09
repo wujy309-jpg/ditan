@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+#  ohos-capability-check —— 命令行构建入口（macOS）
+#
+#  设计说明：
+#    本脚本直接复用 DevEco Studio 内置的 hvigor 引擎与 SDK，不走 npm 下载，
+#    因此离线也能构建。DevEco Studio 图形界面构建不依赖本脚本。
+#
+#  用法：
+#    ./hvigorw assembleHap        # 构建未签名 HAP
+#    ./hvigorw clean              # 清理构建产物
+#    ./hvigorw --stop-daemon      # 停止 hvigor 守护进程
+#
+#  可用环境变量覆盖默认路径：
+#    DEVECO_APP    DevEco Studio 安装位置
+#    JAVA_HOME / NODE_HOME / DEVECO_SDK_HOME
+# ---------------------------------------------------------------------------
+set -e
+
+DEVECO_APP="${DEVECO_APP:-/Applications/DevEco-Studio.app}"
+
+if [ ! -d "$DEVECO_APP" ]; then
+  echo "错误：未找到 DevEco Studio（$DEVECO_APP）" >&2
+  echo "      可用 DEVECO_APP 环境变量指定安装路径。" >&2
+  exit 1
+fi
+
+export NODE_HOME="${NODE_HOME:-$DEVECO_APP/Contents/tools/node}"
+export DEVECO_SDK_HOME="${DEVECO_SDK_HOME:-$DEVECO_APP/Contents/sdk}"
+export JAVA_HOME="${JAVA_HOME:-$DEVECO_APP/Contents/jbr/Contents/Home}"
+export PATH="$JAVA_HOME/bin:$NODE_HOME/bin:$PATH"
+
+HVIGOR_WRAPPER="$DEVECO_APP/Contents/tools/hvigor/bin/hvigorw.js"
+if [ ! -r "$HVIGOR_WRAPPER" ]; then
+  echo "错误：未找到 hvigor 引擎（$HVIGOR_WRAPPER）" >&2
+  exit 1
+fi
+
+# hvigor 拒绝含非 ASCII 字符的工程路径，提前拦截并给出可读提示
+CWD="$(pwd)"
+if LC_ALL=C grep -q '[^ -~]' <<< "$CWD"; then
+  echo "错误：当前工程路径含非 ASCII 字符（例如中文），hvigor 无法构建。" >&2
+  echo "      当前路径：$CWD" >&2
+  echo "      请把工程移动到纯英文路径后重试，例如 ~/DevEcoStudioProjects/" >&2
+  exit 1
+fi
+
+exec "$NODE_HOME/bin/node" "$HVIGOR_WRAPPER" "$@"

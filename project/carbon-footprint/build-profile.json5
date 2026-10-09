@@ -1,0 +1,67 @@
+{
+  "app": {
+    /*
+     * 这里刻意留空，原因如下（两条签名路径都已打通，按场景选一条）：
+     *
+     * 【路径 A · 命令行签名】推荐用于自动化与无图形界面环境
+     *     tools/sign.sh
+     *   它复用 SDK 自带的 OpenHarmony 调试签名材料：自建应用密钥对 →
+     *   用 OpenHarmony Application CA 签发证书链 → 生成调试 profile → 签 HAP。
+     *   **不需要登录华为开发者账号，也不需要 DevEco Studio 图形界面。**
+     *   签名材料放在工程的 signing/ 目录下。
+     *
+     * 【路径 B · IDE 自动签名】推荐团队日常开发使用
+     *   在 DevEco Studio 里：File → Project Structure → Signing Configs →
+     *   勾选 Automatically generate signature。IDE 会把配置写回本文件。
+     *
+     * 为什么不在这里预填：hvigor 要求 storePassword / keyPassword 必须是
+     * DevEco 用本机密钥加密后的密文（长度 ≥ 32），明文会被直接拒绝：
+     *   「The length of the storePassword or keyPassword field in the
+     *     signature configuration is less than 32.」
+     * 而该密文无法跨机器生成，预填一份只在本机有效的配置反而会让团队困惑。
+     */
+    "signingConfigs": [],
+    "products": [
+      {
+        "name": "default",
+        /*
+         * 大赛硬性要求：API 版本 12 及以上。
+         * compatibleSdkVersion = 能安装本应用的最低系统 API；
+         * targetSdkVersion      = 系统按哪个 API 的行为来运行本应用。
+         * compileSdkVersion 不写，默认使用 DevEco Studio 内置 SDK（本机为 HarmonyOS 26.0.0 / API 26）。
+         */
+        "compatibleSdkVersion": "5.0.0(12)",
+        "targetSdkVersion": "5.0.0(12)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

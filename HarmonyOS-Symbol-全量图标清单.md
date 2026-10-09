@@ -1,0 +1,633 @@
+# HarmonyOS Symbol 全量图标清单（官方一手数据）
+> **来源**：华为官方 Symbol 图标库索引文件 `name_map_new.json`，`version` = **2.3**
+> **地址**：`https://developer.huawei.com/allianceCmsResource/resource/HUAWEI_Developer_VUE/template/resources/hm-symbol/name_map_new.json`
+> **用法**：`SymbolGlyph($r('sys.symbol.<name>'))`，`SymbolGlyph` 自 **API 11** 起支持
+
+## 统计
+| 支持版本 | 数量 | API 12 (HarmonyOS 5.0) 可用 |
+|---|---|---|
+| HarmonyOS 5.0+ | 570 | ✅ 是 |
+| HarmonyOS 5.1+ | 5 | ❌ 否（需更高版本） |
+| HarmonyOS 6.0 | 3 | ❌ 否（需更高版本） |
+| HarmonyOS 6.1 | 1 | ❌ 否（需更高版本） |
+| **合计** | **579** | |
+
+> ⚠️ **重要提示**：官方 Symbol 图标库**不含专门的“环保 / 碳 / 叶子 / 树 / 回收 / 图表”语义图标** —— 它来自鸿蒙自家 App（图库、音乐、备忘录、运动健康、钱包、相机等）的用图需求。
+> 碳足迹 App 的品牌语义图标（叶子、树、CO₂）**必须自备 SVG**，用 `Image($r('app.media.xxx')).fillColor('#xxx')` 动态改色。
+
+> ⚠️ “HarmonyOS 5.0+” → API 12 可用的对应关系是**推断**（HarmonyOS 5.0 对应 API 12），官方未逐条声明。建议在 DevEco 中试编译确认。
+
+---
+
+## 交通出行（15 个）
+- `location_up_fill` — 导航  `[Public图标]` HarmonyOS 5.0+
+- `local_fill` — 定位/位置  `[图库]` HarmonyOS 5.0+
+- `map_badge_local` — 地图  `[查找设备]` HarmonyOS 5.0+
+- `navigation` — 导航  `[查找设备]` HarmonyOS 5.0+
+- `local` — 位置/定位  `[畅连消息]` HarmonyOS 5.0+
+- `arrow_bounce_right` — 路线选中  `[花瓣地图]` HarmonyOS 5.0+
+- `location_up` — 导航  `[车主App]` HarmonyOS 5.0+
+- `map` — 显示地图  `[运动健康]` HarmonyOS 5.0+
+- `map_slash` — 隐藏地图/关闭  `[运动健康]` HarmonyOS 5.0+
+- `satellite_map` — 隐藏卫星地图  `[运动健康]` HarmonyOS 5.0+
+- `satellite_map_fill` — 显示卫星地图  `[运动健康]` HarmonyOS 5.0+
+- `location_north_up_right_circle_fill` — 距震中距离  `[通信社交]` HarmonyOS 5.0+
+- `route_plan` — 路线规划  `[钱包]` HarmonyOS 5.0+
+- `local_slash_fill` — 禁用GPS/关闭  `[隐私和安全]` HarmonyOS 5.0+
+- `position` — 设置/定位/跟踪  `[隐私和安全]` HarmonyOS 5.0+
+
+## 人物（31 个）
+- `ear` — 聆听  `[APP]` HarmonyOS 5.0+
+- `hand_tap` — 检测项_触摸屏   `[DFS]` HarmonyOS 5.0+
+- `face_fill` — 面部  `[Public图标]` HarmonyOS 5.0+
+- `face_smiling_fill` — 表情  `[Public图标]` HarmonyOS 5.0+
+- `hand_tap_fill` — 辅助功能  `[Public图标]` HarmonyOS 5.0+
+- `person_crop_circle_fill_1` — 我的-未选中  `[主题]` HarmonyOS 5.0+
+- `hand_thumbsdown` — 不喜欢  `[华为商城]` HarmonyOS 5.0+
+- `children` — 少儿  `[华为视频]` HarmonyOS 5.0+
+- `hand_thumbsup` — 点赞  `[华为音乐]` HarmonyOS 5.0+
+- `hand_draw` — 智选消除  `[图库]` HarmonyOS 5.0+
+- `person_2_fill` — 合并  `[图库]` HarmonyOS 5.0+
+- `person_badge_plus` — 添加人像/增加  `[图库]` HarmonyOS 5.0+
+- `person_fill` — 个人办事  `[应用市场]` HarmonyOS 5.0+
+- `hand_point_up_tap_fill_1` — 显示触摸轨迹  `[截录屏]` HarmonyOS 5.0+
+- `hand_point_up_tap_fill_slash` — 关闭触摸轨迹  `[截录屏]` HarmonyOS 5.0+
+- `figure_running` — 运动  `[智慧助手]` HarmonyOS 5.0+
+- `hand_point_up_tap_fill` — 点击  `[智慧生活]` HarmonyOS 5.0+
+- `capture_smiles` — 笑脸抓拍  `[相机]` HarmonyOS 5.0+
+- `portrait` — 人像  `[相机]` HarmonyOS 5.0+
+- `face_sading` — 不满意  `[花瓣地图]` HarmonyOS 5.0+
+- `face_smiling` — 表情符号和人物  `[输入法]` HarmonyOS 5.0+
+- `hand_thumbsup_fill` — 赞扬  `[输入法]` HarmonyOS 5.0+
+- `person` — 账号  `[输入法]` HarmonyOS 5.0+
+- `figure_arms_open` — 站立  `[运动健康]` HarmonyOS 5.0+
+- `hand_raised_hexagon` — 拦截规则/手  `[通信社交]` HarmonyOS 5.0+
+- `hand_raised_hexagon_fill` — 骚扰电话  `[通信社交]` HarmonyOS 5.0+
+- `person_filled_badge_plus` — 添加成员/增加/添加  `[通信社交]` HarmonyOS 5.0+
+- `person_filled_viewfinder` — 随影人动_on  `[通信社交]` HarmonyOS 5.0+
+- `person_square_fill` — 随影人动_off  `[通信社交]` HarmonyOS 5.0+
+- `person_2` — 添加邮件联系人邮箱  `[邮件]` HarmonyOS 5.0+
+- `face` — 人脸识别  `[隐私和安全]` HarmonyOS 5.0+
+
+## 办公文件（31 个）
+- `doc_text` — 日志/文本/文件  `[DFS]` HarmonyOS 5.0+
+- `checkmark_clipboard` — 问卷调查/钩/勾选  `[Public图标]` HarmonyOS 5.0+
+- `doc_text_fill` — 文件/文本/文件  `[全搜]` HarmonyOS 5.0+
+- `folder_badge_plus` — 新建文件夹  `[华为笔记]` HarmonyOS 5.0+
+- `list_square_bill` — 服务协议  `[华为视频]` HarmonyOS 5.0+
+- `book_open_fill` — 书城-选中  `[华为阅读]` HarmonyOS 5.0+
+- `doc_plaintext` — ic_notes/文本/文件  `[备忘录]` HarmonyOS 5.0+
+- `doc_text_badge_checkmark` — 已完成/钩/文本/文件  `[备忘录]` HarmonyOS 5.0+
+- `form` — 表格  `[备忘录]` HarmonyOS 5.0+
+- `paperclip` — 附件  `[备忘录]` HarmonyOS 5.0+
+- `grid` — 网格  `[天生会画]` HarmonyOS 5.0+
+- `checkmark_clipboard_fill` — 开发/钩/勾选  `[应用市场]` HarmonyOS 5.0+
+- `folder` — 存储/文件  `[应用市场]` HarmonyOS 5.0+
+- `folder_fill` — 工作/文件  `[应用市场]` HarmonyOS 5.0+
+- `ebook` — 电子书  `[控制中心]` HarmonyOS 5.0+
+- `doc_plaintext_and_pencil` — 问题与建议  `[教育中心]` HarmonyOS 5.0+
+- `doc_plaintext_and_pencil_fill` — 写作业  `[教育中心]` HarmonyOS 5.0+
+- `folder_badge_arrow_left` — 保密柜 - 移入保密柜  `[文件管理]` HarmonyOS 5.0+
+- `folder_badge_ellipsis` — 复制 - 其他位置/文件  `[文件管理]` HarmonyOS 5.0+
+- `folder_badge_eye` — 显示隐藏文件夹  `[文件管理]` HarmonyOS 5.0+
+- `book_pages_fill_1` — 小说  `[浏览器]` HarmonyOS 5.0+
+- `briefcase` — 工具箱  `[浏览器]` HarmonyOS 5.0+
+- `doc_text_badge_magnifyingglass` — 页内查找、搜索/查询  `[浏览器]` HarmonyOS 5.0+
+- `case_fill` — 保险理财  `[通信社交]` HarmonyOS 5.0+
+- `arrow_right_folder_circle` — 移至/文件  `[邮件]` HarmonyOS 5.0+
+- `arrow_right_folder_fill` — 移至/文件  `[邮件]` HarmonyOS 5.0+
+- `doc` — 草稿箱  `[邮件]` HarmonyOS 5.0+
+- `doc_text_badge_arrow_up` — 上报征信  `[钱包]` HarmonyOS 5.0+
+- `doc_plaintext_fill` — 备忘录/文本/文件  `[锁屏AOD]` HarmonyOS 5.0+
+- `text_clipboard` — 设置  `[隐私和安全]` HarmonyOS 5.0+
+- `text_clipboard_fill` — 剪贴板-面性  `[隐私和安全]` HarmonyOS 5.0+
+
+## 媒体（36 个）
+- `pause_circle` — 暂停  `[Public图标]` HarmonyOS 5.0+
+- `play_circle` — 播放  `[Public图标]` HarmonyOS 5.0+
+- `media_center` — 播控中心  `[全场景协同]` HarmonyOS 5.0+
+- `fast_forward` — 倍速快进  `[华为视频]` HarmonyOS 5.0+
+- `play_round_rectangle_fill` — 短视频  `[华为视频]` HarmonyOS 5.0+
+- `identify_song` — 听歌识曲  `[华为音乐]` HarmonyOS 5.0+
+- `list_interrupt` — 列表-节奏  `[华为音乐]` HarmonyOS 5.0+
+- `music_note_list` — 播放队列  `[华为音乐]` HarmonyOS 5.0+
+- `order_play` — 顺序播放  `[华为音乐]` HarmonyOS 5.0+
+- `pause_round_triangle_fill` — 暂停  `[华为音乐]` HarmonyOS 5.0+
+- `remove_songlist` — 从列表移除  `[华为音乐]` HarmonyOS 5.0+
+- `repeat_1` — 单曲循环  `[华为音乐]` HarmonyOS 5.0+
+- `shuffle` — 随机播放  `[华为音乐]` HarmonyOS 5.0+
+- `play_circle_fill` — 播放  `[图库]` HarmonyOS 5.0+
+- `repeat` — 循环播放  `[图库]` HarmonyOS 5.0+
+- `skip_silence` — 跳过静音  `[录音机]` HarmonyOS 5.0+
+- `stop_circle_fill` — 停止录屏  `[截录屏]` HarmonyOS 5.0+
+- `backward_end_fill` — 上一首  `[播控]` HarmonyOS 5.0+
+- `forward_end_fill` — 下一首  `[播控]` HarmonyOS 5.0+
+- `gobackward_15` — 深浅自适应  `[播控]` HarmonyOS 5.0+
+- `gobackward_30` — 快退15s  `[播控]` HarmonyOS 5.0+
+- `goforward_10` — 快退30s  `[播控]` HarmonyOS 5.0+
+- `goforward_15` — 快进10s  `[播控]` HarmonyOS 5.0+
+- `goforward_30` — 快进15s  `[播控]` HarmonyOS 5.0+
+- `pause` — 暂停  `[播控]` HarmonyOS 5.0+
+- `play_fill` — 播放  `[播控]` HarmonyOS 5.0+
+- `stop_circle` — 时钟  `[时钟]` HarmonyOS 5.0+
+- `reverse_order` — 切换分屏位置  `[智慧多窗]` HarmonyOS 5.0+
+- `discover_fill` — 发现  `[智慧生活]` HarmonyOS 5.0+
+- `music_fill` — 音乐  `[智慧生活]` HarmonyOS 5.0+
+- `play_hexagon_fill` — 视频  `[浏览器]` HarmonyOS 5.0+
+- `headphones_fill` — 头戴耳机  `[状态栏]` HarmonyOS 5.0+
+- `music` — 音乐  `[相机]` HarmonyOS 5.0+
+- `record_circle` — 语音视频消息  `[通信社交]` HarmonyOS 5.0+
+- `service` — 客服  `[钱包]` HarmonyOS 5.0+
+- `repeat_slash` — 关闭循环  `[预览]` HarmonyOS 6.0
+
+## 家庭（1 个）
+- `drop_fill` — 水费  `[钱包]` HarmonyOS 5.0+
+
+## 形状（9 个）
+- `circle_dashed` — 套索  `[华为笔记]` HarmonyOS 5.0+
+- `rotate_left` — 旋转  `[图库]` HarmonyOS 5.0+
+- `triangleshape_fill` — 稳定性  `[天生会画]` HarmonyOS 5.0+
+- `oval` — 椭圆形  `[截录屏]` HarmonyOS 5.0+
+- `rectangle` — 矩形  `[截录屏]` HarmonyOS 5.0+
+- `smallcircle_filled_circle` — 粗细  `[截录屏]` HarmonyOS 5.0+
+- `square` — 方形  `[截录屏]` HarmonyOS 5.0+
+- `rectangle_split_3x1` — 分栏视图  `[文件管理]` HarmonyOS 5.0+
+- `circle` — 工具箱  `[锁屏AOD]` HarmonyOS 5.0+
+
+## 时间（16 个）
+- `clock_fill` — 运动时间  `[APP]` HarmonyOS 5.0+
+- `alarm` — 时钟  `[Public图标]` HarmonyOS 5.0+
+- `hourglass` — 健康用机主页-屏幕使用管理时间  `[关爱]` HarmonyOS 5.0+
+- `stopwatch` — 定时  `[华为音乐]` HarmonyOS 5.0+
+- `calendar` — 日历  `[应用市场]` HarmonyOS 5.0+
+- `calendar_badge_clock` — 预约新游/日历  `[应用市场]` HarmonyOS 5.0+
+- `calendar_fill` — 新建/日历  `[日历]` HarmonyOS 5.0+
+- `stopwatch_fill` — 新建  `[日历]` HarmonyOS 5.0+
+- `alarm_fill_1` — 闹钟  `[时钟]` HarmonyOS 5.0+
+- `stopwatch_2` — 秒表  `[时钟]` HarmonyOS 5.0+
+- `timer_circle_fill` — 计时器  `[时钟]` HarmonyOS 5.0+
+- `worldclock_fill_2` — 世界时钟  `[时钟]` HarmonyOS 5.0+
+- `clock` — 时长  `[相机]` HarmonyOS 5.0+
+- `timer` — 定时拍摄  `[相机]` HarmonyOS 5.0+
+- `worldclock` — 语言切换  `[输入法]` HarmonyOS 5.0+
+- `worldclock_fill` — 震中经纬度  `[通信社交]` HarmonyOS 5.0+
+
+## 相机与照片（46 个）
+- `picture_damage` — 检测项_应用   `[DFS]` HarmonyOS 5.0+
+- `camera` — 拍照  `[SDK]` HarmonyOS 5.0+
+- `video` — 行车记录仪/视频  `[仪表]` HarmonyOS 5.0+
+- `template` — 热剧  `[华为视频]` HarmonyOS 5.0+
+- `arrow_down_and_rectangle_on_rectangle` — 移出相册  `[图库]` HarmonyOS 5.0+
+- `arrow_up_and_rectangle_on_rectangle` — 移入相册  `[图库]` HarmonyOS 5.0+
+- `camera_fill` — 拍照  `[图库]` HarmonyOS 5.0+
+- `circle_lefthalf_inset_filled` — 黑白  `[图库]` HarmonyOS 5.0+
+- `circle_righthalf_inset_filled` — 饱和度  `[图库]` HarmonyOS 5.0+
+- `drop` — 虚化  `[图库]` HarmonyOS 5.0+
+- `drop_bottomrighthalf_inset_filled` — 自然饱和度  `[图库]` HarmonyOS 5.0+
+- `hand_draw` — 智选消除  `[图库]` HarmonyOS 5.0+
+- `heart_square_stack_fill` — 时刻  `[图库]` HarmonyOS 5.0+
+- `livephoto` — 动态照片  `[图库]` HarmonyOS 5.0+
+- `livephoto_slash` — 关闭动态照片  `[图库]` HarmonyOS 5.0+
+- `paintpalette` — 色调/色盘  `[图库]` HarmonyOS 5.0+
+- `picture` — 图片  `[图库]` HarmonyOS 5.0+
+- `picture_fill` — 图片  `[图库]` HarmonyOS 5.0+
+- `puzzle` — 拼图  `[图库]` HarmonyOS 5.0+
+- `puzzle_fill` — 拼图  `[图库]` HarmonyOS 5.0+
+- `rectangle_on_rectangle` — 相册  `[图库]` HarmonyOS 5.0+
+- `rectangle_on_rectangle_fill` — 相册  `[图库]` HarmonyOS 5.0+
+- `square_slash` — 无边框  `[图库]` HarmonyOS 5.0+
+- `video_fill` — 视频  `[图库]` HarmonyOS 5.0+
+- `picture_2` — 从图库中选择  `[备忘录]` HarmonyOS 5.0+
+- `camera_filters_fill` — 选中滤镜  `[天生会画]` HarmonyOS 5.0+
+- `template_fill` — 视频  `[天际通]` HarmonyOS 5.0+
+- `movie` — 胶卷  `[应用市场]` HarmonyOS 5.0+
+- `dot_video_fill` — 录屏/录制/视频  `[控制中心]` HarmonyOS 5.0+
+- `movie_fill` — 观影  `[智慧生活]` HarmonyOS 5.0+
+- `dot_video` — 正在录制/录屏/视频  `[桌面 控制中心]` HarmonyOS 5.0+
+- `xmark_picture` — 开启智能无图  `[浏览器]` HarmonyOS 5.0+
+- `xmark_picture_fill` — 关闭智能无图  `[浏览器]` HarmonyOS 5.0+
+- `capture_smiles` — 笑脸抓拍  `[相机]` HarmonyOS 5.0+
+- `flower` — 超级微距  `[相机]` HarmonyOS 5.0+
+- `lightbulb` — 开启柔关灯  `[相机]` HarmonyOS 5.0+
+- `lightbulb_slash` — 关闭柔关灯  `[相机]` HarmonyOS 5.0+
+- `line_arrowtriangle_2_inward` — 自拍镜像  `[相机]` HarmonyOS 5.0+
+- `play_video` — 微电影/视频  `[相机]` HarmonyOS 5.0+
+- `resolution_video` — 视频分辨率  `[相机]` HarmonyOS 5.0+
+- `scope` — 开启目标追踪  `[相机]` HarmonyOS 5.0+
+- `scope_slash` — 关闭目标追踪  `[相机]` HarmonyOS 5.0+
+- `shutter_photo` — 图库入口  `[相机]` HarmonyOS 5.0+
+- `play_video_fill` — 脚本/视频  `[输入法]` HarmonyOS 5.0+
+- `video_slasj_fill` — 关闭摄像头  `[通信社交]` HarmonyOS 5.0+
+- `camera_slash_fill` — 禁用相机/关闭  `[隐私和安全]` HarmonyOS 5.0+
+
+## 符号标识（19 个）
+- `bolt_filled_on_circle` — 功率  `[APP]` HarmonyOS 5.0+
+- `info_circle_fill` — 详情、关于  `[Public图标]` HarmonyOS 5.0+
+- `questionmark_circle_fill` — 帮助、疑问、问题/帮助与客服  `[Public图标]` HarmonyOS 5.0+
+- `exclamationmark_circle_fill` — 服务互通失败弹窗/异常/错误  `[全场景协同]` HarmonyOS 5.0+
+- `exclamationmark_circle` — 异常、错误/感叹号  `[全搜]` HarmonyOS 5.0+
+- `exclamationmark_triangle` — 内容举报/感叹号  `[华为音乐]` HarmonyOS 5.0+
+- `info_shield` — 隐私声明  `[图库]` HarmonyOS 5.0+
+- `exclamationmark` — ic_importance/感叹号  `[备忘录]` HarmonyOS 5.0+
+- `questionmark_circle` — 帮助与客服/帮助、疑问、问题  `[应用市场]` HarmonyOS 5.0+
+- `exclamationmark_shield_fill` — 恶意网址拦截  `[浏览器]` HarmonyOS 5.0+
+- `nosign_fill` — 加入黑名单/禁止/禁用/关闭  `[畅连联系人]` HarmonyOS 5.0+
+- `info_circle` — 模式详情  `[相机]` HarmonyOS 5.0+
+- `minus` — 减少  `[相机]` HarmonyOS 5.0+
+- `nosign` — 关闭/禁止/禁用  `[相机]` HarmonyOS 5.0+
+- `bolt_shield_fill` — 应急预警  `[通信社交]` HarmonyOS 5.0+
+- `exclamationmark_triangle_fill` — 警示  `[通信社交]` HarmonyOS 5.0+
+- `bolt` — 电费  `[钱包]` HarmonyOS 5.0+
+- `bolt_fill` — 电费  `[钱包]` HarmonyOS 5.0+
+- `calculator_1` — 计算器  `[锁屏AOD]` HarmonyOS 5.0+
+
+## 箭头（58 个）
+- `arrow_2_circlepath` — 旋转、切换  `[Public图标]` HarmonyOS 5.0+
+- `arrowshape_up_to_line` — 置顶  `[Public图标]` HarmonyOS 5.0+
+- `upload` — 上传  `[Public图标]` HarmonyOS 5.0+
+- `transfer_station` — 中转站  `[中转站]` HarmonyOS 5.0+
+- `arrow_up_to_line_slash` — 多屏协同窗口顶部取消置顶/关闭  `[全场景协同]` HarmonyOS 5.0+
+- `arrowshape_up_to_line_fill` — 置顶  `[全搜]` HarmonyOS 5.0+
+- `arrowtriangle_down_fill` — 下拉列表  `[全搜]` HarmonyOS 5.0+
+- `arrowtriangle_up_fill` — 收起列表  `[全搜]` HarmonyOS 5.0+
+- `circle_and_arrow_down_fill` — 健康用机主页-使用统计  `[关爱]` HarmonyOS 5.0+
+- `chevron_left_2` — 滑动进入  `[华为阅读]` HarmonyOS 5.0+
+- `arrow_down_circle` — 下载  `[华为音乐]` HarmonyOS 5.0+
+- `arrow_counterclockwise` — 恢复  `[图库]` HarmonyOS 5.0+
+- `chevron_down` — 向下  `[图库]` HarmonyOS 5.0+
+- `chevron_left` — 返回/向左  `[图库]` HarmonyOS 5.0+
+- `chevron_right` — 下一步/向右  `[图库]` HarmonyOS 5.0+
+- `chevron_up` — 向上  `[图库]` HarmonyOS 5.0+
+- `redo` — 重做  `[图库]` HarmonyOS 5.0+
+- `undo` — 撤销  `[图库]` HarmonyOS 5.0+
+- `arrow_down_right_and_arrow_up_left` — ic_reduce/缩小  `[备忘录]` HarmonyOS 5.0+
+- `arrow_up_circle` — 检查更新  `[应用市场]` HarmonyOS 5.0+
+- `arrowshape_down_to_line_fill` — 下载量  `[应用市场]` HarmonyOS 5.0+
+- `arrow_right` — 箭头/向右  `[截录屏]` HarmonyOS 5.0+
+- `arrow_right_circle` — 迁移  `[数据克隆]` HarmonyOS 5.0+
+- `line_below_arrowtriangle_up_circle_fill` — 移除设备 filled  `[文件管理]` HarmonyOS 5.0+
+- `line_below_arrowtriangle_up_fill` — 移除设备  `[文件管理]` HarmonyOS 5.0+
+- `arrowshape_3_triangle_path` — 节能  `[智慧助手]` HarmonyOS 5.0+
+- `arrowshape_up_left_and_arrowshape_down_right` — 最大化窗口  `[智慧多窗]` HarmonyOS 5.0+
+- `arrow_left_circle` — 返回  `[智慧屏]` HarmonyOS 5.0+
+- `chevron_down_circle` — 下键  `[智慧屏]` HarmonyOS 5.0+
+- `chevron_left_circle` — 左键  `[智慧屏]` HarmonyOS 5.0+
+- `chevron_right_circle` — 右键  `[智慧屏]` HarmonyOS 5.0+
+- `chevron_up_circle` — 上键  `[智慧屏]` HarmonyOS 5.0+
+- `arrow_right_up_and_square` — 新页签打开  `[浏览器]` HarmonyOS 5.0+
+- `arrow_up_left` — 快捷填充搜索词  `[浏览器]` HarmonyOS 5.0+
+- `chevron_up_2` — 上滑查看更多内容  `[浏览器]` HarmonyOS 5.0+
+- `arrow_clockwise` — 邮件刷新  `[电子邮件]` HarmonyOS 5.0+
+- `arrowshape_turn_up_left` — 回复  `[电子邮件]` HarmonyOS 5.0+
+- `arrowshape_turn_up_right` — 转发  `[电子邮件]` HarmonyOS 5.0+
+- `paperplane` — 邮件发送  `[电子邮件]` HarmonyOS 5.0+
+- `arrowshape_up_to_line_slash_fill` — 取消置顶/关闭  `[畅连消息]` HarmonyOS 5.0+
+- `arrow_counterclockwise_clock` — 历史记录  `[计算器]` HarmonyOS 5.0+
+- `arrow_up` — 翻页/向上  `[输入法]` HarmonyOS 5.0+
+- `arrow_up_left_and_arrow_down_right` — 放大/全屏  `[输入法]` HarmonyOS 5.0+
+- `arrowshape_up` — 翻译输入  `[输入法]` HarmonyOS 5.0+
+- `arrowshape_up_fill` — 拍摄输入  `[输入法]` HarmonyOS 5.0+
+- `arrowshape_up_frame` — 检查更新  `[输入法]` HarmonyOS 5.0+
+- `arrowshape_up_frame_fill` — 换肤  `[输入法]` HarmonyOS 5.0+
+- `arrow_down` — 北斗卫星消息/向下  `[通信社交]` HarmonyOS 5.0+
+- `arrow_up_circle_fill` — 发送/向上  `[通信社交]` HarmonyOS 5.0+
+- `arrow_left` — 返回  `[邮件]` HarmonyOS 5.0+
+- `arrow_up_to_line` — 一键回顶  `[邮件]` HarmonyOS 5.0+
+- `arrowshape_turn_up_right_fill` — 转发  `[邮件]` HarmonyOS 5.0+
+- `download` — 附件下载  `[邮件]` HarmonyOS 5.0+
+- `rectangle_and_arrowshape_turn_up_right` — 转发  `[邮件]` HarmonyOS 5.0+
+- `chevron_down_2_circle` — 下一页  `[预览]` HarmonyOS 5.0+
+- `chevron_up_2_circle` — 上一页  `[预览]` HarmonyOS 5.0+
+- `chevron_down_L` — 向下  `[图库]` HarmonyOS 5.1+
+- `chevron_up_L` — 向上  `[图库]` HarmonyOS 5.1+
+
+## 系统UI（147 个）
+- `slider_vertical_3` — 呼吸节奏/调节  `[APP]` HarmonyOS 5.0+
+- `battery` — 检测项_电池/电量  `[DFS]` HarmonyOS 5.0+
+- `bluetooth` — 检测项_蓝牙   `[DFS]` HarmonyOS 5.0+
+- `hand_tap` — 检测项_触摸屏   `[DFS]` HarmonyOS 5.0+
+- `nfc` — NFC  `[DFS]` HarmonyOS 5.0+
+- `power` — 开关机键  `[DFS]` HarmonyOS 5.0+
+- `rays` — 检测项_重启 /加载  `[DFS]` HarmonyOS 5.0+
+- `rectangle_portrait_rotate` — 检测项_重力感应 /旋转  `[DFS]` HarmonyOS 5.0+
+- `rectangle_portrait_wave_2` — 检测项_震动器/振动  `[DFS]` HarmonyOS 5.0+
+- `speaker_minus` — 音量下键  `[DFS]` HarmonyOS 5.0+
+- `speaker_plus` — 音量上键  `[DFS]` HarmonyOS 5.0+
+- `speaker_wave_3` — 检测项_扬声器/音量  `[DFS]` HarmonyOS 5.0+
+- `square_grid_2x2` — 检测项_应用   `[DFS]` HarmonyOS 5.0+
+- `wifi` — 检测项_WLAN   `[DFS]` HarmonyOS 5.0+
+- `arrow_2_circlepath` — 旋转、切换  `[Public图标]` HarmonyOS 5.0+
+- `bell` — 响铃、通知/铃声/铃铛  `[Public图标]` HarmonyOS 5.0+
+- `externaldrive_3` — 内存、存储  `[Public图标]` HarmonyOS 5.0+
+- `flashlight_off` — 电筒关  `[Public图标]` HarmonyOS 5.0+
+- `flashlight_on` — 手电筒开  `[Public图标]` HarmonyOS 5.0+
+- `gearshape_fill` — 设置  `[Public图标]` HarmonyOS 5.0+
+- `hand_tap_fill` — 辅助功能  `[Public图标]` HarmonyOS 5.0+
+- `moon` — 免打扰/月亮  `[Public图标]` HarmonyOS 5.0+
+- `paperplane_fill` — 邮件发送  `[Public图标]` HarmonyOS 5.0+
+- `plus_square_on_square` — 复制、备份/copy  `[Public图标]` HarmonyOS 5.0+
+- `save_fill` — 保存  `[Public图标]` HarmonyOS 5.0+
+- `speaker_fill` — 音量降低  `[Public图标]` HarmonyOS 5.0+
+- `bookmark_filled_on_bookmark` — hitouch稍后阅读  `[hivision/hitouch]` HarmonyOS 5.0+
+- `brush_fill` — 主题-选中态/换肤  `[主题]` HarmonyOS 5.0+
+- `house` — home/首页  `[主题]` HarmonyOS 5.0+
+- `dot_grid_2x2` — 更多/more  `[全搜]` HarmonyOS 5.0+
+- `eye_slash` — 密码不可见/眼睛  `[全搜]` HarmonyOS 5.0+
+- `magnifyingglass` — 搜索/查询/查找/search  `[全搜]` HarmonyOS 5.0+
+- `mic` — 语音/话筒/麦克风  `[全搜]` HarmonyOS 5.0+
+- `trash` — 删除/垃圾箱/回收站  `[全搜]` HarmonyOS 5.0+
+- `funnel` — 内容访问限制/筛选/沙漏  `[关爱]` HarmonyOS 5.0+
+- `hand_thumbsdown` — 不喜欢  `[华为商城]` HarmonyOS 5.0+
+- `sun_max_fill` — 主题-选中态-黄  `[华为阅读]` HarmonyOS 5.0+
+- `sun_min` — 主题-light/亮度  `[华为阅读]` HarmonyOS 5.0+
+- `hand_thumbsup` — 点赞  `[华为音乐]` HarmonyOS 5.0+
+- `heart_slash` — 不喜欢/收藏/爱心  `[华为音乐]` HarmonyOS 5.0+
+- `house_fill` — 首页-选中/home  `[华为音乐]` HarmonyOS 5.0+
+- `speaker` — 音量  `[华为音乐]` HarmonyOS 5.0+
+- `arrow_counterclockwise` — 恢复  `[图库]` HarmonyOS 5.0+
+- `checkmark_square` — 多选选/钩/勾选  `[图库]` HarmonyOS 5.0+
+- `checkmark_square_fill` — 已选/钩/勾选  `[图库]` HarmonyOS 5.0+
+- `full_screen_fill` — 预览/放大/全屏/最大  `[图库]` HarmonyOS 5.0+
+- `heart` — 取消收藏/爱心/喜欢  `[图库]` HarmonyOS 5.0+
+- `heart_fill` — 收藏/爱心/喜欢  `[图库]` HarmonyOS 5.0+
+- `label` — 标注  `[图库]` HarmonyOS 5.0+
+- `lock_fill` — 锁  `[图库]` HarmonyOS 5.0+
+- `lock_open_fill` — 解锁  `[图库]` HarmonyOS 5.0+
+- `minus_circle` — 移除  `[图库]` HarmonyOS 5.0+
+- `qrcode` — 二维码  `[图库]` HarmonyOS 5.0+
+- `redo` — 重做  `[图库]` HarmonyOS 5.0+
+- `save` — 保存  `[图库]` HarmonyOS 5.0+
+- `speaker_wave_3_slash` — 关闭声音  `[图库]` HarmonyOS 5.0+
+- `square_fill_grid_2x2` — 分类相册  `[图库]` HarmonyOS 5.0+
+- `trash_fill` — 删除相册/垃圾箱/回收站  `[图库]` HarmonyOS 5.0+
+- `undo` — 撤销  `[图库]` HarmonyOS 5.0+
+- `xmark` — 退出/关闭/取消/colse  `[图库]` HarmonyOS 5.0+
+- `xmark_circle_fill` — 取消/关闭/退出/colse  `[图库]` HarmonyOS 5.0+
+- `arrow_down_right_and_arrow_up_left` — ic_reduce/缩小  `[备忘录]` HarmonyOS 5.0+
+- `checkmark` — 确认/钩/勾选  `[备忘录]` HarmonyOS 5.0+
+- `checkmark_circle` — 清单/钩/勾选  `[备忘录]` HarmonyOS 5.0+
+- `checkmark_square_on_square` — 全选/钩/勾选  `[备忘录]` HarmonyOS 5.0+
+- `checkmark_square_on_square_fill` — 取消全选/钩/勾选  `[备忘录]` HarmonyOS 5.0+
+- `dot_grid_1x2` — ic_more_list/更多  `[备忘录]` HarmonyOS 5.0+
+- `more` — 更多  `[备忘录]` HarmonyOS 5.0+
+- `share` — 分享   `[备忘录]` HarmonyOS 5.0+
+- `star_fill` — favourites_filled/收藏/五角  `[备忘录]` HarmonyOS 5.0+
+- `bookmark_fill` — 热推套餐  `[天际通]` HarmonyOS 5.0+
+- `pin` — 取消常驻  `[小艺建议]` HarmonyOS 5.0+
+- `pin_fill_1` — 设为常驻  `[小艺建议]` HarmonyOS 5.0+
+- `clean` — 清理加速  `[应用市场]` HarmonyOS 5.0+
+- `externaldrive_fill_3` — 类别/内存/存储  `[应用市场]` HarmonyOS 5.0+
+- `person_fill` — 个人办事  `[应用市场]` HarmonyOS 5.0+
+- `star` — 获赞与收藏/五角  `[应用市场]` HarmonyOS 5.0+
+- `bookmark` — 标记打点  `[录音机]` HarmonyOS 5.0+
+- `hand_point_up_tap_fill_1` — 显示触摸轨迹  `[截录屏]` HarmonyOS 5.0+
+- `hand_point_up_tap_fill_slash` — 关闭触摸轨迹  `[截录屏]` HarmonyOS 5.0+
+- `checkmark_circle_fill` — 口算批改/钩/勾选  `[打印和扫描]` HarmonyOS 5.0+
+- `plus_square_on_square_fill` — 复印/复制/copy  `[打印和扫描]` HarmonyOS 5.0+
+- `lock_filled_arrow_counterclockwise` — 旋转锁定  `[控制中心]` HarmonyOS 5.0+
+- `rectangle_rotate` — 切换模式/手机/旋转  `[教育中心]` HarmonyOS 5.0+
+- `ellipsis_circle` — 其他/点/更多  `[数据克隆]` HarmonyOS 5.0+
+- `externaldrive` — 移动存储设备  `[文件管理]` HarmonyOS 5.0+
+- `externaldrive_fill` — 移动存储设备 filled  `[文件管理]` HarmonyOS 5.0+
+- `circle_viewfinder` — 扫一扫  `[智慧屏]` HarmonyOS 5.0+
+- `bell_slash` — 静音/铃声/铃铛/关闭  `[智慧生活]` HarmonyOS 5.0+
+- `clean_fill` — 保洁、清理  `[智慧生活]` HarmonyOS 5.0+
+- `hand_point_up_tap_fill` — 点击  `[智慧生活]` HarmonyOS 5.0+
+- `speaker_wave_1` — 音量调小  `[智慧生活 ]` HarmonyOS 5.0+
+- `speaker_wave_1_fill` — 音量调小fill  `[智慧生活 ]` HarmonyOS 5.0+
+- `speaker_wave_2` — 音量调大  `[智慧生活 ]` HarmonyOS 5.0+
+- `speaker_wave_2_fill` — 音量调大fill  `[智慧生活 ]` HarmonyOS 5.0+
+- `battery_75percent` — 设备的电量 会根据设备实际电量动态变化/电池  `[查找设备]` HarmonyOS 5.0+
+- `bell_fill` — 播放铃声/铃铛/响铃/通知  `[查找设备]` HarmonyOS 5.0+
+- `more_fill` — 外屏应用  `[桌面]` HarmonyOS 5.0+
+- `slider_horizontal_2` — 控制中心/调节  `[桌面]` HarmonyOS 5.0+
+- `wifi_slash` — WLAN 关闭  `[桌面]` HarmonyOS 5.0+
+- `speaker_slash_fill` — 静音Fill/关闭  `[桌面 控制中心]` HarmonyOS 5.0+
+- `speaker_wave_3_fill` — 音量Fill  `[桌面 控制中心]` HarmonyOS 5.0+
+- `arrow_right_up_and_square` — 新页签打开  `[浏览器]` HarmonyOS 5.0+
+- `airplane_fill` — 飞行模式  `[状态栏]` HarmonyOS 5.0+
+- `bell_slash_fill` — 响铃静音/铃声/铃铛/关闭  `[状态栏]` HarmonyOS 5.0+
+- `bluetooth_slash` — 三态开关补充/蓝牙/关闭  `[状态栏]` HarmonyOS 5.0+
+- `eye` — 护眼模式/眼睛  `[状态栏]` HarmonyOS 5.0+
+- `mic_fill` — 话筒/语音/麦克风  `[状态栏]` HarmonyOS 5.0+
+- `moon_fill` — 免打扰/月亮  `[状态栏]` HarmonyOS 5.0+
+- `nfc_fill` — NFC  `[状态栏]` HarmonyOS 5.0+
+- `visibility` — 阅读量  `[玩机技巧]` HarmonyOS 5.0+
+- `arrow_clockwise` — 邮件刷新  `[电子邮件]` HarmonyOS 5.0+
+- `paperplane` — 邮件发送  `[电子邮件]` HarmonyOS 5.0+
+- `plus_circle` — 附件区/添加/增加  `[畅连消息]` HarmonyOS 5.0+
+- `minus_circle_fill` — 移除  `[畅连联系人]` HarmonyOS 5.0+
+- `plus_circle_fill` — 添加/增加  `[畅连联系人]` HarmonyOS 5.0+
+- `briefcase_fill` — 保险理财  `[畅连通话]` HarmonyOS 5.0+
+- `gearshape` — 设置  `[相机]` HarmonyOS 5.0+
+- `minus` — 减少  `[相机]` HarmonyOS 5.0+
+- `moon_circle_fill` — 望月模式开  `[相机]` HarmonyOS 5.0+
+- `moon_slash_circle` — 望月模式关/关闭  `[相机]` HarmonyOS 5.0+
+- `plus` — 增加/添加  `[相机]` HarmonyOS 5.0+
+- `speaker_slash` — 拍摄静音/关闭  `[相机]` HarmonyOS 5.0+
+- `sun_max` — 曝光/亮度  `[相机]` HarmonyOS 5.0+
+- `arrow_counterclockwise_clock` — 历史记录  `[计算器]` HarmonyOS 5.0+
+- `minus_magnifyingglass` — 缩小  `[设置]` HarmonyOS 5.0+
+- `plus_magnifyingglass` — 放大  `[设置]` HarmonyOS 5.0+
+- `rectangle_portrait_wave_2_fill` — 振动  `[设置]` HarmonyOS 5.0+
+- `battery_fill` — 能量入口/电池/电量  `[车控设置]` HarmonyOS 5.0+
+- `arrow_up_left_and_arrow_down_right` — 放大/全屏  `[输入法]` HarmonyOS 5.0+
+- `brush` — 换肤/主题  `[输入法]` HarmonyOS 5.0+
+- `hand_thumbsup_fill` — 赞扬  `[输入法]` HarmonyOS 5.0+
+- `lock` — 关闭/锁  `[输入法]` HarmonyOS 5.0+
+- `lock_open` — 开启  `[输入法]` HarmonyOS 5.0+
+- `paperplane_right_fill` — 发送  `[输入法]` HarmonyOS 5.0+
+- `plus_square` — 定制工具栏  `[输入法]` HarmonyOS 5.0+
+- `xmark_circle` — 关闭/退出/取消/colse  `[输入法]` HarmonyOS 5.0+
+- `flag` — 目标  `[运动健康]` HarmonyOS 5.0+
+- `flag_fill` — 目标  `[运动健康]` HarmonyOS 5.0+
+- `arrowshape_turn_up_right_fill` — 转发  `[邮件]` HarmonyOS 5.0+
+- `rectangle_and_arrowshape_turn_up_right` — 转发  `[邮件]` HarmonyOS 5.0+
+- `flashlight_off_fill` — 手电筒关  `[锁屏AOD]` HarmonyOS 5.0+
+- `flashlight_on_fill` — 手电筒开  `[锁屏AOD]` HarmonyOS 5.0+
+- `line_viewfinder` — 扫一扫  `[锁屏AOD]` HarmonyOS 5.0+
+- `battery_100percent` — 电量-100/电池  `[音频]` HarmonyOS 5.0+
+- `fullscreen` — 全屏  `[华为视频]` HarmonyOS 6.0
+- `star_slash` — 取消收藏  `[文件管理]` HarmonyOS 6.1
+
+## 编辑（56 个）
+- `plus_square_dashed_on_square` — 粘贴  `[Public图标]` HarmonyOS 5.0+
+- `sort_1` — 正序  `[任务管理器]` HarmonyOS 5.0+
+- `list_bullet_square` — 订单  `[华为商城]` HarmonyOS 5.0+
+- `circle_dashed` — 套索  `[华为笔记]` HarmonyOS 5.0+
+- `eraser_line` — 橡皮擦  `[华为笔记]` HarmonyOS 5.0+
+- `character` — 放大字体  `[华为阅读]` HarmonyOS 5.0+
+- `list_checkmask` — 列表-列表编辑  `[华为音乐]` HarmonyOS 5.0+
+- `swap` — 列表-排序  `[华为音乐]` HarmonyOS 5.0+
+- `text_and_arrow_down` — 列表-倒序  `[华为音乐]` HarmonyOS 5.0+
+- `text_and_arrow_up` — 列表-正序  `[华为音乐]` HarmonyOS 5.0+
+- `character_arrow_clockwise` — 自动优化  `[图库]` HarmonyOS 5.0+
+- `character_viewfinder` — 文字识别  `[图库]` HarmonyOS 5.0+
+- `crop_rotate` — 裁剪  `[图库]` HarmonyOS 5.0+
+- `cut` — 截取/剪刀  `[图库]` HarmonyOS 5.0+
+- `rectangle_and_cut` — 截屏  `[图库]` HarmonyOS 5.0+
+- `square_and_pencil` — 编辑  `[图库]` HarmonyOS 5.0+
+- `square_and_pencil_fill` — 重命名相册/编辑  `[图库]` HarmonyOS 5.0+
+- `trapezoid_and_line_horizontal` — 水平校正  `[图库]` HarmonyOS 5.0+
+- `trapezoid_and_line_vertical` — 垂直校正  `[图库]` HarmonyOS 5.0+
+- `bold` — 加粗  `[备忘录]` HarmonyOS 5.0+
+- `close_sidebar` — 关闭/侧边栏开关  `[备忘录]` HarmonyOS 5.0+
+- `indent_right` — 缩进  `[备忘录]` HarmonyOS 5.0+
+- `indentation_left` — 缩进2  `[备忘录]` HarmonyOS 5.0+
+- `list_bullet` — 项目符号-圆点  `[备忘录]` HarmonyOS 5.0+
+- `list_letter` — 项目符号-字母  `[备忘录]` HarmonyOS 5.0+
+- `list_number` — 项目符号-数字  `[备忘录]` HarmonyOS 5.0+
+- `list_square` — 项目符号-方形  `[备忘录]` HarmonyOS 5.0+
+- `open_sidebar` — 打开/侧边栏开关  `[备忘录]` HarmonyOS 5.0+
+- `text_aligncenter` — 居中对齐  `[备忘录]` HarmonyOS 5.0+
+- `text_alignleft` — 左对齐  `[备忘录]` HarmonyOS 5.0+
+- `text_alignright` — 右对齐  `[备忘录]` HarmonyOS 5.0+
+- `list_bullet_square_fill` — 属性  `[天生会画]` HarmonyOS 5.0+
+- `transparency_lock` — 透明度锁定  `[天生会画]` HarmonyOS 5.0+
+- `triangleshape_fill` — 稳定性  `[天生会画]` HarmonyOS 5.0+
+- `vertical_flip` — 垂直翻转  `[天生会画]` HarmonyOS 5.0+
+- `rectangle_split_3x1` — 分栏视图  `[文件管理]` HarmonyOS 5.0+
+- `textformat_size_square_fill` — 识别文字/字体大小  `[智慧助手]` HarmonyOS 5.0+
+- `arrowshape_turn_up_left` — 回复  `[电子邮件]` HarmonyOS 5.0+
+- `arrowshape_turn_up_right` — 转发  `[电子邮件]` HarmonyOS 5.0+
+- `paintbrush` — 画笔  `[绘画]` HarmonyOS 5.0+
+- `paintbrush_fill` — 选中画笔  `[绘画]` HarmonyOS 5.0+
+- `paintpalette_fill` — 颜色动态/色盘  `[绘画]` HarmonyOS 5.0+
+- `align_bottom` — 底对齐  `[设置外屏主题]` HarmonyOS 5.0+
+- `align_center` — 居中  `[设置外屏主题]` HarmonyOS 5.0+
+- `align_left` — 左对齐  `[设置外屏主题]` HarmonyOS 5.0+
+- `align_middle` — 中间  `[设置外屏主题]` HarmonyOS 5.0+
+- `align_right` — 右对齐  `[设置外屏主题]` HarmonyOS 5.0+
+- `align_top` — 顶对齐  `[设置外屏主题]` HarmonyOS 5.0+
+- `textformat_size_square` — 字体大小/识别文字  `[输入法]` HarmonyOS 5.0+
+- `list_bullet_circle` — 公众号消息menu  `[通信社交]` HarmonyOS 5.0+
+- `pencil_waveform` — 涂鸦  `[通信社交]` HarmonyOS 5.0+
+- `pencil_waveform_fill` — 涂鸦-面性  `[通信社交]` HarmonyOS 5.0+
+- `rename` — 重命名  `[通信社交]` HarmonyOS 5.0+
+- `sort` — 备注  `[通信社交]` HarmonyOS 5.0+
+- `pencil_line_1` — 高亮色  `[预览]` HarmonyOS 5.0+
+- `crop` — 裁剪  `[预览]` HarmonyOS 5.1+
+
+## 设备（1 个）
+- `earphone_bluetooth_fill` — 耳机通用  `[耳机]` HarmonyOS 5.0+
+
+## 连接（26 个）
+- `bluetooth` — 检测项_蓝牙   `[DFS]` HarmonyOS 5.0+
+- `mobiledata` — 检测项_移动网络/数据  `[DFS]` HarmonyOS 5.0+
+- `nfc` — NFC  `[DFS]` HarmonyOS 5.0+
+- `wifi` — 检测项_WLAN   `[DFS]` HarmonyOS 5.0+
+- `cloud_and_arrow_up` — 云上传  `[Public图标]` HarmonyOS 5.0+
+- `dot_radiowaves_left_and_right` — 分享  `[全场景协同]` HarmonyOS 5.0+
+- `icloud` — 云开启  `[图库]` HarmonyOS 5.0+
+- `icloud_slash` — 云关闭  `[图库]` HarmonyOS 5.0+
+- `icloud_slash_fill` — 云关闭  `[图库]` HarmonyOS 5.0+
+- `link_slash` — 断开连接  `[打印和扫描]` HarmonyOS 5.0+
+- `cloud_and_arrow_down` — 从云备份下载  `[数据克隆]` HarmonyOS 5.0+
+- `wifi_slash` — WLAN 关闭  `[桌面]` HarmonyOS 5.0+
+- `bluetooth_slash` — 三态开关补充/蓝牙/关闭  `[状态栏]` HarmonyOS 5.0+
+- `nfc_fill` — NFC  `[状态栏]` HarmonyOS 5.0+
+- `hotspot` — 智能热点  `[设置]` HarmonyOS 5.0+
+- `wifi_6` — ic_statusbar_wifi6  `[设置]` HarmonyOS 5.0+
+- `wifi_6_badge_exclamationmark` — ic_wifi6_error  `[设置]` HarmonyOS 5.0+
+- `wifi_6_badge_lock` — ic_statusbar_wifi6_lock  `[设置]` HarmonyOS 5.0+
+- `wifi_6plus` — ic_statusbar_wifi6+  `[设置]` HarmonyOS 5.0+
+- `wifi_6plus_badge_exclamationmark` — ic_wifi6+_error  `[设置]` HarmonyOS 5.0+
+- `wifi_6plus_badge_lock` — ic_statusbar_wifi6+_lock  `[设置]` HarmonyOS 5.0+
+- `wifi_badge_exclamationmark` — ic_wifi_error  `[设置]` HarmonyOS 5.0+
+- `wifi_badge_lock` — ic_wifi_lock  `[设置]` HarmonyOS 5.0+
+- `link` — 连接入口  `[车控设置]` HarmonyOS 5.0+
+- `nearlink` — 隐私和安全星闪权限  `[隐私和安全]` HarmonyOS 5.0+
+- `exclamationmark_cloud_fill` — 异常  `[云空间]` HarmonyOS 5.1+
+
+## 通信（34 个）
+- `message_fill` — 信息/短信/消息  `[Public图标]` HarmonyOS 5.0+
+- `ellipsis_bubble` — 评论  `[主题]` HarmonyOS 5.0+
+- `mic` — 语音/话筒/麦克风  `[全搜]` HarmonyOS 5.0+
+- `ellipsis_message` — 系统消息/对话  `[应用市场]` HarmonyOS 5.0+
+- `envelope` — 消息/邮件  `[应用市场]` HarmonyOS 5.0+
+- `message` — 短信/信息/消息  `[应用市场]` HarmonyOS 5.0+
+- `mic_circle` — 语音/话筒/麦克风  `[智慧屏]` HarmonyOS 5.0+
+- `message_badge_gearshape_1` — 消息管理/信息/消息/设置  `[智慧生活]` HarmonyOS 5.0+
+- `mic_fill` — 话筒/语音/麦克风  `[状态栏]` HarmonyOS 5.0+
+- `phone_fill` — 童话/电话  `[状态栏]` HarmonyOS 5.0+
+- `checkmark_message_fill` — 已读/钩/勾选/信息/消息  `[畅连消息]` HarmonyOS 5.0+
+- `phone` — 通话音量/电话  `[车控设置]` HarmonyOS 5.0+
+- `beidou_satellite_circle_fill` — 畅连北斗卫星  `[通信社交]` HarmonyOS 5.0+
+- `beidou_satellite_fill` — 北斗卫星消息  `[通信社交]` HarmonyOS 5.0+
+- `dial` — 拨号盘_加粗  `[通信社交]` HarmonyOS 5.0+
+- `ellipsis_message_fill` — 消息/对话  `[通信社交]` HarmonyOS 5.0+
+- `hd_square_fill` — HD  `[通信社交]` HarmonyOS 5.0+
+- `message_on_message` — 畅连消息/信息/消息  `[通信社交]` HarmonyOS 5.0+
+- `message_on_message_fill` — 消息tab/信息/消息  `[通信社交]` HarmonyOS 5.0+
+- `mic_slash` — 静音/关闭  `[通信社交]` HarmonyOS 5.0+
+- `mic_slash_fill` — 静音-面性/话筒/麦克风/关闭  `[通信社交]` HarmonyOS 5.0+
+- `phone_down_fill` — 挂断/电话  `[通信社交]` HarmonyOS 5.0+
+- `recordingtape` — 语音信箱  `[通信社交]` HarmonyOS 5.0+
+- `recordingtape_rectangle` — 语音信箱  `[通信社交]` HarmonyOS 5.0+
+- `recordingtape_rectangle_fill` — 语音信箱  `[通信社交]` HarmonyOS 5.0+
+- `satellite` — 天通卫星  `[通信社交]` HarmonyOS 5.0+
+- `phone_fill_slash` — 通话不可用/电话/关闭  `[通话]` HarmonyOS 5.0+
+- `envelope_badge_arrow_left` — 回复/邮件  `[邮件]` HarmonyOS 5.0+
+- `envelope_badge_arrow_right` — 转发/邮件  `[邮件]` HarmonyOS 5.0+
+- `envelope_badge_dot_fill` — 邮件/消息  `[邮件]` HarmonyOS 5.0+
+- `envelope_fill` — 邮件/消息  `[邮件]` HarmonyOS 5.0+
+- `envelope_open_fill` — 标记为已读/消息/邮件  `[邮件]` HarmonyOS 5.0+
+- `envelope_open` — 打开邮件  `[通信社交]` HarmonyOS 5.1+
+- `ellipsis_message_badge_circle` — 标记未读  `[信息]` HarmonyOS 6.0
+
+## 键盘（32 个）
+- `translate` — hitouch全屏翻译  `[hivision/hitouch]` HarmonyOS 5.0+
+- `return_down_left` — 手写笔  `[手写笔]` HarmonyOS 5.0+
+- `keyboard_fill` — 注音  `[设置]` HarmonyOS 5.0+
+- `asterisk_rectangle_badge_handwritten` — 手写  `[输入法]` HarmonyOS 5.0+
+- `celiakeyboard_elevate` — 键盘抬高  `[输入法]` HarmonyOS 5.0+
+- `celiakeyboard_mechanical` — 机械键盘  `[输入法]` HarmonyOS 5.0+
+- `celiakeyboard_menu_icon_size` — 编辑键盘  `[输入法]` HarmonyOS 5.0+
+- `input_mode` — 输入方式  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_bihua` — 支持的医院  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_cangjie` — 笔画  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_combination` — 双拼  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_gearshape` — 仓颉  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_handwritten` — 键盘设置  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_mic` — 语音键盘  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_spell` — 键盘手写  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_wubi` — 拼音  `[输入法]` HarmonyOS 5.0+
+- `keyboard_badge_zhuyin` — 五笔  `[输入法]` HarmonyOS 5.0+
+- `keyboard_onehanded_left` — 键盘  `[输入法]` HarmonyOS 5.0+
+- `keyboard_onehanded_right` — 右手模式  `[输入法]` HarmonyOS 5.0+
+- `keyboard_square` — 左手模式  `[输入法]` HarmonyOS 5.0+
+- `keyboard_thumbmode` — 悬浮键盘  `[输入法]` HarmonyOS 5.0+
+- `onehand` — 单手模式  `[输入法]` HarmonyOS 5.0+
+- `selector` — 编辑光标移动  `[输入法]` HarmonyOS 5.0+
+- `space_1` — 空格  `[输入法]` HarmonyOS 5.0+
+- `swipeup_input` — 上滑输入  `[输入法]` HarmonyOS 5.0+
+- `traditional_square` — 繁体输入  `[输入法]` HarmonyOS 5.0+
+- `delete_left` — 删除/关闭  `[通信社交]` HarmonyOS 5.0+
+- `delete_left_fill` — 删除/关闭  `[通信社交]` HarmonyOS 5.0+
+- `keyboard` — 拇指模式  `[通信社交]` HarmonyOS 5.0+
+- `keyboard_circle` — 键盘  `[通信社交]` HarmonyOS 5.0+
+- `translate_c2e` — ic_translate_c2e/翻译  `[邮件]` HarmonyOS 5.0+
+- `translate_e2c` — ic_translate_e2c/翻译  `[邮件]` HarmonyOS 5.0+
+
+## 隐私&安全（21 个）
+- `touchid_circle` — 检测项_指纹传感器   `[DFS]` HarmonyOS 5.0+
+- `staroflife_rectangle` — 密码登录/星号  `[SDK]` HarmonyOS 5.0+
+- `lock_open_badge_child` — 童锁开  `[仪表]` HarmonyOS 5.0+
+- `eye_slash` — 密码不可见/眼睛  `[全搜]` HarmonyOS 5.0+
+- `lock_fill` — 锁  `[图库]` HarmonyOS 5.0+
+- `lock_open_fill` — 解锁  `[图库]` HarmonyOS 5.0+
+- `checkmark_shield` — 安全检测/钩  `[应用市场]` HarmonyOS 5.0+
+- `person_shield` — 隐私管理  `[智慧助手]` HarmonyOS 5.0+
+- `checkmark_shield_fill` — 安全保护/钩  `[智慧生活]` HarmonyOS 5.0+
+- `eye` — 护眼模式/眼睛  `[状态栏]` HarmonyOS 5.0+
+- `vpn_key` — VPN  `[状态栏]` HarmonyOS 5.0+
+- `lock` — 关闭/锁  `[输入法]` HarmonyOS 5.0+
+- `lock_open` — 开启  `[输入法]` HarmonyOS 5.0+
+- `hand_raised_hexagon` — 拦截规则/手  `[通信社交]` HarmonyOS 5.0+
+- `hand_raised_hexagon_fill` — 骚扰电话  `[通信社交]` HarmonyOS 5.0+
+- `key_horizontal` — 添加车钥匙  `[钱包]` HarmonyOS 5.0+
+- `touchid` — 小指纹  `[锁屏AOD]` HarmonyOS 5.0+
+- `key_shield` — 设置  `[隐私和安全]` HarmonyOS 5.0+
+- `key_shield_fill` — 超级隐私  `[隐私和安全]` HarmonyOS 5.0+
+- `key_shield_slash_fill` — 禁用超级隐私/关闭  `[隐私和安全]` HarmonyOS 5.0+
+- `person_shield_fill` — 隐私声明  `[隐私和安全]` HarmonyOS 5.0+

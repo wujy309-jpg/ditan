@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+#  「碳迹」仓库的忽略规则
+#
+#  原则：仓库放**源码、脚本、文档、截图、交付物**；
+#        不放**构建产物、第三方工具二进制、外部参考资料的大文件**。
+# ---------------------------------------------------------------------------
+
+# ---- 构建产物 ----
+build/
+.hvigor/
+oh_modules/
+node_modules/
+local.properties
+.cxx/
+*.hap
+*.hsp
+signing/
+
+# ---- 外部参考资料（数值来源 PDF / 网页存档，体积大且可重新下载）----
+.research/venv/
+.research/pylibs/
+.research/*.pdf
+.research/*.txt
+.research/*.html
+.research/appstore/
+.research/pages/
+.research/ui/
+.research/*.sh
+
+# ---- 第三方工具二进制（rar/unrar，1.4 MB，用时自行下载）----
+tools/rar/
+
+# ---- 交付物里的压缩包（内容就是另外三个文件，重复）----
+交付物/*.rar
+
+# ---- 系统 / 编辑器 ----
+.DS_Store
+*.swp
+.idea/
+.vscode/

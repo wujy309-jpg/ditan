@@ -1,0 +1,9 @@
+{
+  "modelVersion": "5.0.0",
+  "description": "碳迹 —— 碳足迹记录与减排指南（赛题二）",
+  "dependencies": {
+    "@ohos/mpchart": "^3.0.30"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
+}

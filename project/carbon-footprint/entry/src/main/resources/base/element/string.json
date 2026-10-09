@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "碳迹 · 全民绿色生活碳积分与减排指南（主模块）"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "碳迹 · 记录低碳行为，量化减排贡献"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "碳迹"
+    },
+    {
+      "name": "reason_distributed_datasync",
+      "value": "用于在您的手机与平板等设备间同步碳积分与减排记录"
+    },
+    {
+      "name": "card_display_name",
+      "value": "今日碳迹"
+    },
+    {
+      "name": "card_desc",
+      "value": "不打开应用也能看到今日减排量与碳积分"
+    }
+  ]
+}
