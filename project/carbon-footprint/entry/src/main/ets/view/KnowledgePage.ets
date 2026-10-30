@@ -19,8 +19,8 @@
  */
 import { allTags, Article, ARTICLES } from '../data/KnowledgeBase';
 import {
-  Bg, Brand, CatColor, Edge, FontSize, Ink, LineHeight, Motion, Radius,
-  Semantic, Space, Weight
+  Bg, Brand, CatColor, Edge, FontSize, Ink, LineHeight, Motion, Radius, Rule,
+  Seal, Semantic, Serif, Space, Weight
 } from '../common/Theme';
 import { Chip, EmptyHint, HeroCard, SectionCard } from './Common';
 
@@ -107,54 +107,45 @@ export struct KnowledgePage {
       Scroll() {
         Column() {
           // ============ 英雄区：标题 + 副标题 + 分类/篇数小统计 ============
-          HeroCard({ variant: 'fresh' }) {
-            Row() {
-              Column() {
-                Text('双碳科普')
-                  .fontSize(FontSize.TITLE_M)
-                  .fontWeight(Weight.TITLE)
-                  .fontColor(Ink.ON_BRAND)
-                Text(`共 ${ARTICLES.length} 篇 · 了解碳中和，才能更好地记录低碳生活`)
-                  .fontSize(FontSize.BODY_S)
-                  .fontColor(Ink.ON_BRAND_2)
-                  .lineHeight(LineHeight.BODY_S)
-                  .margin({ top: 6 })
+          HeroCard({ variant: 'fresh', period: `${ARTICLES.length} 篇`, stamp: '科普' }) {
+            Column() {
+              Text('双 碳 科 普')
+                .fontFamily(Serif.FAMILY)
+                .fontSize(26)
+                .fontColor(Ink.ON_BRAND)
+                .letterSpacing(2)
+                .width('100%')
+
+              Text('了解碳中和，才能更好地记录低碳生活。')
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_3)
+                .lineHeight(18)
+                .width('100%')
+                .margin({ top: 8 })
+
+              Column()
+                .width('100%')
+                .height(1)
+                .backgroundColor('#33F7F2E6')
+                .margin({ top: 16 })
+
+              Row() {
+                Text(`${allTags().length} 个分类`)
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .letterSpacing(1)
+                  .fontFeature('"tnum" 1')
+                Blank()
+                Text(`共 ${ARTICLES.length} 篇`)
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .fontFeature('"tnum" 1')
               }
-              .layoutWeight(1)
-              .alignItems(HorizontalAlign.Start)
-
-              // 大号半透明书本：纯装饰，不承载信息。
-              // 这里的 #33FFFFFF 是「叠在渐变上的透明白」，属于装饰而非语义色，故不走令牌。
-              Image($r('app.media.ic_tab_book'))
-                .width(72)
-                .height(72)
-                .fillColor('#33FFFFFF')
-                .objectFit(ImageFit.Contain)
-                .margin({ left: Space.SM })
+              .width('100%')
+              .margin({ top: 10 })
             }
             .width('100%')
-            .alignItems(VerticalAlign.Center)
-
-            // 英雄区底部两个小胶囊：分类数 / 篇数。
-            // 底色的 #26FFFFFF 是「叠在绿渐变上的 15% 透明白」，与看板页英雄区同语言，
-            // 属于装饰性反白、不是语义色，所以不走令牌。
-            Row() {
-              Text(`${allTags().length} 个分类`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor('#26FFFFFF')
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-              Text(`${ARTICLES.length} 篇科普`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor('#26FFFFFF')
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                .margin({ left: Space.SM })
-            }
-            .width('100%')
-            .margin({ top: Space.LG })
+            .alignItems(HorizontalAlign.Start)
           }
 
           // ============ 标签筛选 ============
@@ -197,31 +188,26 @@ export struct KnowledgePage {
                   // 40×40 分类色圆角图标块：让每张卡先「有图形」，再读文字
                   Column() {
                     Image(this.tagIcon(a.tag))
-                      .width(20)
-                      .height(20)
-                      .fillColor(this.tagColor(a.tag))
+                      .width(15)
+                      .height(15)
+                      .fillColor(Ink.L3)
                       .objectFit(ImageFit.Contain)
                   }
-                  .width(40)
-                  .height(40)
-                  .borderRadius(Radius.SM)
-                  .backgroundColor(this.tagSoft(a.tag))
-                  .justifyContent(FlexAlign.Center)
+                  .width(18)
+                  .height(22)
+                  .justifyContent(FlexAlign.Start)
                   .alignItems(HorizontalAlign.Center)
 
                   Column() {
                     Row() {
-                      Text(a.tag)
-                        .fontSize(FontSize.CAPTION)
-                        .fontWeight(Weight.SUBTITLE)
-                        .fontColor(this.tagColor(a.tag))
-                        .backgroundColor(this.tagSoft(a.tag))
-                        .borderRadius(Radius.XS)
-                        .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+                      Text(`· ${a.tag}`)
+                        .fontSize(10)
+                        .letterSpacing(1)
+                        .fontColor(Seal.RED)
 
                       Text(a.title)
-                        .fontSize(FontSize.SUB_M)
-                        .fontWeight(Weight.SUBTITLE)
+                        .fontFamily(Serif.FAMILY)
+                        .fontSize(15)
                         .fontColor(Ink.L1)
                         .layoutWeight(1)
                         .margin({ left: Space.SM })
@@ -245,10 +231,10 @@ export struct KnowledgePage {
 
                 // 展开 / 收起：文字右侧箭头，展开时右箭头转 90° 变成下箭头
                 Row() {
-                  Text(this.expanded === a.id ? '收起' : '展开')
-                    .fontSize(FontSize.BODY_S)
-                    .fontWeight(Weight.SUBTITLE)
-                    .fontColor(Ink.L3)
+                  Text(this.expanded === a.id ? '收 起' : '展 开')
+                    .fontSize(10)
+                    .letterSpacing(1)
+                    .fontColor(Ink.L4)
                   Image($r('app.media.ic_arrow'))
                     .width(14)
                     .height(14)
@@ -304,6 +290,7 @@ export struct KnowledgePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Bg.PAGE)
+    // 纸纹兼作底色（backgroundColor 会盖住 backgroundImage）
+    .backgroundImage($r('app.media.paper_page'), ImageRepeat.XY)
   }
 }

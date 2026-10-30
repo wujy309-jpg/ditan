@@ -19,7 +19,7 @@ import { CarbonRepository } from '../data/CarbonRepository';
 import { buildAdvice, buildDailyTasks, DailyTask } from '../data/TaskEngine';
 import { BehaviorRecord, categoryLabel, round2, today } from '../model/Models';
 import {
-  Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Semantic, Space, Weight,
+  Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Seal, Semantic, Serif, Space, Weight,
   Motion, shadowCard, shadowRaised, shadowSubtle, heroGradient, softGradient
 } from '../common/Theme';
 
@@ -364,17 +364,17 @@ export struct SmartService {
       // ---------- 今日任务 ----------
       Column() {
         Row() {
-          Text('今日低碳任务')
-            .fontSize(15)
-            .fontWeight(FontWeight.Bold)
+          Text('今 日 低 碳 任 务')
+            .fontFamily(Serif.FAMILY)
+            .fontSize(14)
             .fontColor(Ink.L1)
             .layoutWeight(1)
-          Text('创新点 4')
-            .fontSize(10)
-            .fontColor(Semantic.ALERT)
-            .backgroundColor(Semantic.ALERT_SOFT)
-            .borderRadius(8)
-            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+          Text('智 能 任 务')
+            .fontSize(9)
+            .letterSpacing(1)
+            .fontColor(Seal.RED)
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .border({ width: 0.8, color: Seal.RED, radius: 1 })
         }
         .width('100%')
         .margin({ bottom: 10 })
@@ -490,12 +490,13 @@ export struct SmartService {
         }
 
         Row() {
-          Button(this.generating ? '生成中…' : '生成分享图')
+          Button(this.generating ? '生成中…' : '生成分享图', { type: ButtonType.Normal })
             .layoutWeight(1)
             .height(38)
             .fontSize(13)
             .backgroundColor(Brand.PRIMARY)
             .enabled(!this.generating)
+            .borderRadius(Radius.XS)
             .onClick(() => {
               this.generate();
             })

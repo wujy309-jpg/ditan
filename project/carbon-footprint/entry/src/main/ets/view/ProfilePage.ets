@@ -17,7 +17,7 @@
  *   2. 四张卡片全部改用 Common.ets 的 SectionCard（统一圆角 / 内边距 / 阴影 / 图标标题 / 角标）；
  *   3. 同步面板的 6 行改用 InfoRow（图标 + 标签 + 值 + 分隔线），
  *      并把「同步结果」这一行按 SyncOutcome 着色；
- *   4. 按钮统一胶囊圆角（Radius.FULL），主操作走 buttonGradient()，
+ *   4. 按钮统一胶囊圆角（Radius.XS），主操作走 buttonGradient()，
  *      危险操作用 Semantic.WARNING / WARNING_SOFT 这一对；
  *   5. 裸写颜色全部收编到 Theme 令牌。
  *
@@ -33,7 +33,7 @@ import { AiCheckResult, runAiSelfCheck } from '../ai/AiSelfCheck';
 import { resourceManager } from '@kit.LocalizationKit';
 import { HeroCard, InfoRow, SectionCard } from './Common';
 import {
-  Bg, Brand, Edge, FontSize, Ink, LineHeight, Radius, Semantic, Space, Weight,
+  Bg, Brand, Edge, FontSize, Ink, LineHeight, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   buttonGradient, shadowCard
 } from '../common/Theme';
 
@@ -366,7 +366,7 @@ export struct ProfilePage {
                   .fontWeight(Weight.SUBTITLE)
                   .fontColor(Ink.ON_BRAND)
                   .backgroundColor('#26FFFFFF')
-                  .borderRadius(Radius.FULL)
+                  .borderRadius(Radius.XS)
                   .padding({ left: 9, right: 9, top: 3, bottom: 3 })
                   .margin({ top: 7 })
               }
@@ -377,32 +377,31 @@ export struct ProfilePage {
             .width('100%')
             .alignItems(VerticalAlign.Center)
 
-            // 三枚小胶囊：前两枚与看板页同口径，第三枚换成「碳积分」——两页第一眼就能分开
-            Flex({ wrap: FlexWrap.Wrap }) {
+            // 一行账：三个数用点线隔开，不做胶囊（胶囊是模板感最强的形状）
+            Row() {
               Text(`累计 ${this.totalSaved} kg`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor('#26FFFFFF')
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                .margin({ right: Space.SM, bottom: Space.SM })
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_2)
+                .fontFeature('"tnum" 1')
+              Text('·')
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_3)
+                .margin({ left: 8, right: 8 })
               Text(`${this.recordCount} 条记录`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor('#26FFFFFF')
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                .margin({ right: Space.SM, bottom: Space.SM })
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_2)
+                .fontFeature('"tnum" 1')
+              Text('·')
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_3)
+                .margin({ left: 8, right: 8 })
               Text(`碳积分 ${this.points} 分`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor('#26FFFFFF')
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                .margin({ right: Space.SM, bottom: Space.SM })
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_2)
+                .fontFeature('"tnum" 1')
             }
             .width('100%')
-            .margin({ top: Space.XL })
+            .margin({ top: Space.LG })
           }
 
           // ============ 我的档案 ============
@@ -420,10 +419,11 @@ export struct ProfilePage {
               .fontSize(FontSize.BODY_L)
               .fontColor(Ink.L1)
               .placeholderColor(Ink.L4)
-              .backgroundColor(Bg.SUNKEN)
-              .borderRadius(Radius.SM)
-              .borderWidth(this.focusField === 'nick' ? 1.5 : 0)
-              .borderColor(Brand.PRIMARY)
+              .backgroundColor(Color.Transparent)
+              .borderRadius(0)
+              .padding({ left: 0 })
+              .borderWidth({ bottom: this.focusField === 'nick' ? 1.5 : 1 })
+              .borderColor(this.focusField === 'nick' ? Ink.L1 : Rule.HAIR)
               .onFocus(() => {
                 this.focusField = 'nick';
               })
@@ -447,8 +447,11 @@ export struct ProfilePage {
               .placeholderColor(Ink.L4)
               .backgroundColor(Bg.SUNKEN)
               .borderRadius(Radius.SM)
-              .borderWidth(this.focusField === 'family' ? 1.5 : 0)
-              .borderColor(Brand.PRIMARY)
+              .backgroundColor(Color.Transparent)
+              .borderRadius(0)
+              .padding({ left: 0 })
+              .borderWidth({ bottom: this.focusField === 'family' ? 1.5 : 1 })
+              .borderColor(this.focusField === 'family' ? Ink.L1 : Rule.HAIR)
               .onFocus(() => {
                 this.focusField = 'family';
               })
@@ -459,15 +462,16 @@ export struct ProfilePage {
                 this.familyId = v;
               })
 
-            Button('保存档案')
+            Button('保存档案', { type: ButtonType.Normal })
               .width('100%')
               .height(44)
               .fontSize(FontSize.BODY_M)
               .fontColor(Ink.ON_BRAND)
+            .borderRadius(Radius.XS)
               // 官方约束：Button 设渐变前必须把 backgroundColor 置为透明，否则实色底会盖住渐变
               .backgroundColor(Color.Transparent)
               .linearGradient(buttonGradient())
-              .borderRadius(Radius.FULL)
+              .borderRadius(Radius.XS)
               .margin({ top: Space.LG })
               .onClick(() => {
                 this.saveProfile();
@@ -479,7 +483,7 @@ export struct ProfilePage {
             title: '超级终端同步',
             icon: $r('app.media.ic_sync'),
             showIcon: true,
-            badge: '创新点 1'
+            badge: ''
           }) {
             ForEach(this.syncRows, (r: KV) => {
               InfoRow({
@@ -494,25 +498,26 @@ export struct ProfilePage {
             }, (r: KV) => r.label)
 
             Row() {
-              Button('刷新设备')
+              Button('刷新设备', { type: ButtonType.Normal })
                 .layoutWeight(1)
                 .height(40)
                 .fontSize(FontSize.BODY_M)
                 .backgroundColor(Brand.SOFT)
                 .fontColor(Brand.PRIMARY)
-                .borderRadius(Radius.FULL)
+                .borderRadius(Radius.XS)
                 .onClick(() => {
                   this.refreshSync();
                 })
-              Button(this.syncing ? '同步中…' : '立即同步')
+              Button(this.syncing ? '同步中…' : '立即同步', { type: ButtonType.Normal })
                 .layoutWeight(1)
                 .height(40)
                 .fontSize(FontSize.BODY_M)
                 .fontColor(Ink.ON_BRAND)
+            .borderRadius(Radius.XS)
                 // 同「保存档案」：渐变按钮需要透明底
                 .backgroundColor(Color.Transparent)
                 .linearGradient(buttonGradient())
-                .borderRadius(Radius.FULL)
+                .borderRadius(Radius.XS)
                 .margin({ left: Space.SM })
                 .enabled(!this.syncing)
                 .onClick(() => {
@@ -535,7 +540,7 @@ export struct ProfilePage {
             title: '端侧 AI 自检',
             icon: $r('app.media.ic_ai'),
             showIcon: true,
-            badge: '创新点 2'
+            badge: ''
           }) {
             Text('用内置测试图跑一次端侧推理，确认模型可加载、张量形状正确、能输出候选索引。'
               + '这个过程全程离线，也是做「索引 → 类目」标定表的第一步。')
@@ -544,13 +549,13 @@ export struct ProfilePage {
               .lineHeight(LineHeight.BODY_S)
               .width('100%')
 
-            Button(this.aiBusy ? '推理中…' : '运行 AI 自检')
+            Button(this.aiBusy ? '推理中…' : '运行 AI 自检', { type: ButtonType.Normal })
               .width('100%')
               .height(40)
               .fontSize(FontSize.BODY_M)
               .backgroundColor(Brand.SOFT)
               .fontColor(Brand.PRIMARY)
-              .borderRadius(Radius.FULL)
+              .borderRadius(Radius.XS)
               .margin({ top: Space.MD })
               .enabled(!this.aiBusy)
               .onClick(() => {
@@ -596,23 +601,23 @@ export struct ProfilePage {
           // ============ 主要功能 5：本地数据管理 ============
           SectionCard({ title: '本地数据管理', icon: $r('app.media.ic_backup'), showIcon: true }) {
             Row() {
-              Button('备份数据')
+              Button('备份数据', { type: ButtonType.Normal })
                 .layoutWeight(1)
                 .height(40)
                 .fontSize(FontSize.BODY_M)
                 .backgroundColor(Brand.SOFT)
                 .fontColor(Brand.PRIMARY)
-                .borderRadius(Radius.FULL)
+                .borderRadius(Radius.XS)
                 .onClick(() => {
                   this.backup('json');
                 })
-              Button('导出报表')
+              Button('导出报表', { type: ButtonType.Normal })
                 .layoutWeight(1)
                 .height(40)
                 .fontSize(FontSize.BODY_M)
                 .backgroundColor(Brand.SOFT)
                 .fontColor(Brand.PRIMARY)
-                .borderRadius(Radius.FULL)
+                .borderRadius(Radius.XS)
                 .margin({ left: Space.SM })
                 .onClick(() => {
                   this.backup('csv');
@@ -621,13 +626,13 @@ export struct ProfilePage {
             .width('100%')
 
             // 危险操作：语义色成对使用（WARNING 文字 + WARNING_SOFT 底）
-            Button('清空全部数据')
+            Button('清空全部数据', { type: ButtonType.Normal })
               .width('100%')
               .height(40)
               .fontSize(FontSize.BODY_M)
               .backgroundColor(Semantic.WARNING_SOFT)
               .fontColor(Semantic.WARNING)
-              .borderRadius(Radius.FULL)
+              .borderRadius(Radius.XS)
               .margin({ top: Space.MD })
               .onClick(() => {
                 this.wipe();
@@ -654,6 +659,7 @@ export struct ProfilePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Bg.PAGE)
+    // 纸纹兼作底色（backgroundColor 会盖住 backgroundImage）
+    .backgroundImage($r('app.media.paper_page'), ImageRepeat.XY)
   }
 }

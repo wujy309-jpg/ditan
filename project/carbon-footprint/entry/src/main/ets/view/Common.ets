@@ -1,37 +1,32 @@
 /**
- * 通用视觉组件 —— 让五个页面「看起来像同一个应用」
+ * 通用视觉组件 v3 —— 「碳账本」
  *
- * 为什么要有这个文件：
- *   诊断发现，v1 的界面之所以「朴素」，很大一部分原因是**每个页面各自手搓卡片**——
- *   同样是「白底 + 16 圆角 + 16 内边距」的容器，在 5 个文件里被抄了 30 多遍，
- *   每抄一遍就会漂移一点（有的加阴影有的不加、有的圆角 14 有的 16）。
+ * 这一版把「卡片」这个概念从组件里删掉了。页面上的分组不再靠白底圆角块，
+ * 而是靠：表头（宋体标题 + 双细线）+ 行（等宽数字 + 引导点线）+ 留白。
  *
- *   把「卡片长什么样」收敛到这里之后：
- *     · 改一处，全应用同步变；
- *     · 页面代码只剩「内容是什么」，不再重复描述「长什么样」。
- *
- * 组件与用途：
- *   HeroCard     页面第一屏的渐变主卡（五个页面统一用它，只换 variant）
- *   SectionCard  带阴影的标准内容卡（含图标标题行）
- *   CardTitle    卡片内的小标题行（不想套整张卡时单独用）
- *   StatTile     三宫格里的「大数字 + 标签」
- *   Chip         胶囊标签 / 筛选器
- *   RankRow      带进度条的分类明细行
- *   RingStat     环形进度（英雄区里用）
- *   EmptyHint    空状态
+ * 组件列表（名字与 v2 一致，页面不用改 import）：
+ *   HeroCard     抬头区：墨色封面 + 期次 + 朱印 + 双线
+ *   SectionCard  账目段：宋体小标题 + 双线 + 内容
+ *   CardTitle    段内二级标题
+ *   StatTile     一格数（标签上、数字下、右对齐）
+ *   Chip         方角筛选器（选中 = 墨底纸字）
+ *   RankRow      分类明细行（引导点线 + 细比例条）
+ *   RingStat     环形进度（朱砂）
+ *   EmptyHint    空账页提示
+ *   InfoRow      账目「项 —— 值」行
+ *   Seal         朱砂印章（新）
+ *   DottedRule   引导点线（新，内部用）
  */
 import {
-  Bg, Brand, CatColor, Edge, FontSize, Ink, LineHeight, Radius, Semantic, Space, Weight,
-  decoBlob, heroGradient, heroGradientDeep, heroGradientFresh,
-  shadowBrand, shadowCard
+  Bg, Brand, CatColor, Edge, FontSize, Ink, LineHeight, Radius, Rule, Seal as SealColor, Semantic,
+  Serif, Space, Weight, shadowCard
 } from '../common/Theme';
 import { Category } from '../model/Models';
 
 // ---------------------------------------------------------------------------
-// 类目 → 颜色（图表、标签、进度条共用同一套，保证「同色同义」）
+// 类目 → 颜色
 // ---------------------------------------------------------------------------
 
-/** 类目识别色。必须与 Charts.ets 里 pieColors() 的取值一一对应 */
 export function catColor(c: string): string {
   if (c === Category.ENERGY) {
     return CatColor.ENERGY;
@@ -45,7 +40,6 @@ export function catColor(c: string): string {
   return CatColor.TRAVEL;
 }
 
-/** 类目浅色底 */
 export function catSoft(c: string): string {
   if (c === Category.ENERGY) {
     return CatColor.ENERGY_SOFT;
@@ -59,63 +53,196 @@ export function catSoft(c: string): string {
   return CatColor.TRAVEL_SOFT;
 }
 
+/** 等宽数字 —— 账本里所有数字都要用 */
+export function tnum(t: TextAttribute): TextAttribute {
+  return t.fontFeature('"tnum" 1');
+}
+
 // ---------------------------------------------------------------------------
-// 英雄区：页面第一屏的渐变主卡
+// 朱砂印章
 // ---------------------------------------------------------------------------
 
 /**
- * @param variant  'brand' 标准绿 / 'deep' 深墨绿（数据页）/ 'fresh' 清爽绿（科普页）
- * @param deco     预留参数（当前实现不再叠加装饰层，原因见 Theme.heroGradient 注释）
+ * 一枚长方形朱印，两字竖排，轻微倾斜。
+ *
+ * 为什么要「轻微倾斜」：真正盖出来的章不可能摆正。这个 -5° 是整套界面里
+ * 唯一一处「不整齐」，也是让人相信「这是被设计过的」而不是「这是生成的」的细节。
+ */
+@Component
+export struct Seal {
+  @Prop text: string = '核减';
+  /**
+   * > 0 时改盖「连续 N 天」方印。
+   * 连续天数是一个人的身份，不是一个统计值 —— 这东西该被盖章，不该只当小字。
+   */
+  @Prop days: number = 0;
+  @Prop sealSize: number = 13;
+  @Prop angle: number = -5;
+
+  build() {
+    Column() {
+      if (this.days > 0) {
+        // 2×2 方印：连 / 续 / N / 天
+        Column() {
+          Row() {
+            Text('连')
+              .fontFamily(Serif.FAMILY)
+              .fontSize(this.sealSize * 0.78)
+              .fontColor(SealColor.RED)
+            Text('续')
+              .fontFamily(Serif.FAMILY)
+              .fontSize(this.sealSize * 0.78)
+              .fontColor(SealColor.RED)
+              .margin({ left: 1 })
+          }
+          Row() {
+            Text(`${this.days}`)
+              .fontFamily(Serif.FAMILY)
+              .fontSize(this.sealSize * 0.86)
+              .fontColor(SealColor.RED)
+              .fontFeature('"tnum" 1')
+            Text('天')
+              .fontFamily(Serif.FAMILY)
+              .fontSize(this.sealSize * 0.78)
+              .fontColor(SealColor.RED)
+              .margin({ left: 1 })
+          }
+          .margin({ top: 1 })
+        }
+        .padding(1)
+        .border({ width: 0.6, color: SealColor.RED, radius: 0.5 })
+      } else {
+        Text(this.text.substring(0, 1))
+          .fontFamily(Serif.FAMILY)
+          .fontSize(this.sealSize)
+          .fontColor(SealColor.RED)
+        Text(this.text.substring(1, 2))
+          .fontFamily(Serif.FAMILY)
+          .fontSize(this.sealSize)
+          .fontColor(SealColor.RED)
+      }
+    }
+    .width(this.sealSize * (this.days > 0 ? 3.0 : 2.1))
+    .height(this.sealSize * (this.days > 0 ? 3.1 : 2.9))
+    .justifyContent(FlexAlign.Center)
+    .border({ width: 1.2, color: SealColor.RED, radius: 1 })
+    .rotate({ angle: this.angle })
+    .opacity(0.92)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 引导点线：账本里「项目 ………… 金额」之间那串点
+// ---------------------------------------------------------------------------
+
+/**
+ * 用重复的「·」撑满剩余宽度，再裁掉溢出部分。
+ * ArkUI 的 Divider 不支持虚线，Shape 的 strokeDashArray 在低版本上行为不一致，
+ * 这是最稳的一张牌：一个 Text + layoutWeight(1) + Clip，任何分辨率的真机都一样。
+ */
+@Component
+struct DottedRule {
+  @Prop dotColor: string = Rule.DASH;
+
+  build() {
+    Text('····································································································')
+      .fontSize(10)
+      .fontColor(this.dotColor)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Clip })
+      .layoutWeight(1)
+      .margin({ left: 6, right: 6 })
+      .translate({ y: -2 })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 抬头区
+// ---------------------------------------------------------------------------
+
+/**
+ * @param variant  兼容 v2 的调用（brand/deep/fresh），v3 已统一为墨色封面
+ * @param deco     兼容参数，不再使用
+ * @param period   期次文本（右上角小字，如「2026-10 · 第 6 号」）
+ * @param stamp    印章文字，空串表示不盖
  */
 @Component
 export struct HeroCard {
   @Prop variant: string = 'brand';
   @Prop deco: boolean = true;
   @Prop bottomSpace: number = Space.MD;
+  @Prop period: string = '';
+  @Prop stamp: string = '碳迹';
+  /** > 0 时右上角盖「连续 N 天」方印（没有连续数据时才显示「碳迹」二字章） */
+  @Prop days: number = 0;
   @BuilderParam content: () => void;
-
-  private gradient(): LinearGradientOptions {
-    if (this.variant === 'deep') {
-      return heroGradientDeep();
-    }
-    if (this.variant === 'fresh') {
-      return heroGradientFresh();
-    }
-    return heroGradient();
-  }
 
   build() {
     Column() {
+      // —— 抬头：刊名 + 期次 + 印
+      Row() {
+        Text('碳 迹 · 减 排 账')
+          .fontFamily(Serif.FAMILY)
+          .fontSize(11)
+          .fontColor(Ink.ON_BRAND_3)
+          .letterSpacing(1)
+
+        Blank()
+
+        if (this.period.length > 0) {
+          Text(this.period)
+            .fontFamily(Serif.FAMILY)
+            .fontSize(10)
+            .fontColor(Ink.ON_BRAND_3)
+            .letterSpacing(0.5)
+            .margin({ right: 10 })
+        }
+
+        if (this.days > 0) {
+          Seal({ text: this.stamp, days: this.days, sealSize: 11 })
+        } else if (this.stamp.length > 0) {
+          Seal({ text: this.stamp, sealSize: 11 })
+        }
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .height(34)
+
+      // —— 双线：账簿表头的标准画法（粗线在上、细线在下）
+      Column()
+        .width('100%')
+        .height(1)
+        .backgroundColor('#3A3226')
+        .margin({ top: 10 })
+      Column()
+        .width('100%')
+        .height(1)
+        .backgroundColor('#2A241B')
+        .margin({ top: 2.5, bottom: 16 })
+
       this.content()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-    .padding(Space.XL)
-    .linearGradient(this.gradient())
-    .borderRadius(Radius.XL)
-    // 1px 半透明白描边 —— 让渐变卡的边缘有一道「高光」，像玻璃的厚度
-    .border({ width: 1, color: Edge.SHEEN })
-    .clip(true)
-    .shadow(shadowBrand())
+    .padding({ left: Space.XL, right: Space.XL, top: 10, bottom: Space.XL })
+    .backgroundColor(Ink.DECK)
+    // 墨面上的颗粒：像压过的深色卡纸，不是一块纯色
+    .backgroundImage($r('app.media.ink_card'), ImageRepeat.XY)
+    .borderRadius(Radius.MD)
     .margin({ bottom: this.bottomSpace })
   }
 }
 
 // ---------------------------------------------------------------------------
-// 标准内容卡
+// 账目段
 // ---------------------------------------------------------------------------
 
 /**
- * 带阴影的内容卡。
- *
- * v1 最大的问题之一：阴影函数定义了却只在 1 个页面调用过 4 次，
- * 其余 30 多张卡片是「贴在背景上的白块」。卡片没有阴影 = 没有层级 = 看起来平。
- * 这里把 shadowCard() 变成卡片的**默认行为**，从机制上杜绝漏加。
- *
- * @param title     标题；空串表示不要标题行
- * @param icon      标题图标；不传则不画（配合 showIcon=false）
- * @param showIcon  是否显示标题图标
- * @param padding   内边距；默认 16
+ * @param title     段标题（宋体）
+ * @param icon      兼容 v2；v3 不再画图标，改画一道朱砂短横
+ * @param showIcon  兼容参数
+ * @param inset     内边距；v3 默认 16
+ * @param badge     右上角小字（如「共 6 条」），方角、朱砂
  */
 @Component
 export struct SectionCard {
@@ -126,64 +253,60 @@ export struct SectionCard {
   @Prop inset: number = Space.LG;
   @Prop bottomSpace: number = Space.MD;
   @Prop badge: string = '';
-  @Prop badgeColor: string = Semantic.ALERT;
-  @Prop badgeSoft: string = Semantic.ALERT_SOFT;
+  @Prop badgeColor: string = SealColor.RED;
+  @Prop badgeSoft: string = SealColor.RED_SOFT;
   @BuilderParam content: () => void;
 
   build() {
     Column() {
       if (this.title.length > 0) {
         Row() {
-          if (this.showIcon) {
-            // 图标底：给图标一个浅色圆角底，比裸图标更有「设计过」的感觉
-            Column() {
-              Image(this.icon)
-                .width(16)
-                .height(16)
-                .fillColor(this.iconColor)
-                .objectFit(ImageFit.Contain)
-            }
-            .width(28)
-            .height(28)
-            .borderRadius(Radius.SM)
-            .backgroundColor(Bg.SUBTLE)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            .margin({ right: Space.SM })
-          }
+          // 表头前的一小段朱砂 —— 像账页上的栏目索引
+          Column()
+            .width(9)
+            .height(2)
+            .backgroundColor(SealColor.RED)
+            .margin({ right: 7 })
+
           Text(this.title)
-            .fontSize(FontSize.SUB_M)
-            .fontWeight(Weight.SUBTITLE)
+            .fontFamily(Serif.FAMILY)
+            .fontSize(15)
             .fontColor(Ink.L1)
+            .letterSpacing(0.8)
             .layoutWeight(1)
+
           if (this.badge.length > 0) {
             Text(this.badge)
               .fontSize(FontSize.CAPTION)
-              .fontWeight(Weight.SUBTITLE)
               .fontColor(this.badgeColor)
-              .backgroundColor(this.badgeSoft)
-              .borderRadius(Radius.XS)
-              .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+              .letterSpacing(0.5)
+              .padding({ left: 5, right: 5, top: 2, bottom: 2 })
+              .border({ width: 0.8, color: this.badgeColor, radius: 1 })
           }
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
-        .margin({ bottom: Space.MD })
+        .margin({ bottom: 8 })
+
+        // 双线分隔：账本每个栏目之间都这么画
+        Column().width('100%').height(1).backgroundColor(Rule.STRONG)
+        Column().width('100%').height(1).backgroundColor(Rule.HAIR).margin({ top: 2.5, bottom: 12 })
       }
 
       this.content()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-    .padding(this.inset)
+    .padding({ left: this.inset, right: this.inset, top: 14, bottom: 12 })
     .backgroundColor(Bg.CARD)
+    // 纸纹：17 级左右的暖褐颗粒，肉眼几乎看不出，但「不是纯色」
+    .backgroundImage($r('app.media.paper_card'), ImageRepeat.XY)
     .borderRadius(Radius.MD)
-    .shadow(shadowCard())
     .margin({ bottom: this.bottomSpace })
   }
 }
 
-/** 不带外卡的小标题行：用于已经在大卡内部的二级分组 */
+/** 段内二级小标题 */
 @Component
 export struct CardTitle {
   @Prop title: string = '';
@@ -193,92 +316,91 @@ export struct CardTitle {
 
   build() {
     Row() {
-      if (this.showIcon) {
-        Image(this.icon)
-          .width(16)
-          .height(16)
-          .fillColor(this.iconColor)
-          .objectFit(ImageFit.Contain)
-          .margin({ right: 6 })
-      }
       Text(this.title)
-        .fontSize(FontSize.SUB_S)
-        .fontWeight(Weight.SUBTITLE)
-        .fontColor(Ink.L1)
+        .fontFamily(Serif.FAMILY)
+        .fontSize(FontSize.BODY_M)
+        .fontColor(Ink.L2)
+        .letterSpacing(0.6)
+        .layoutWeight(1)
+      Text('—')
+        .fontSize(FontSize.CAPTION)
+        .fontColor(Ink.L4)
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
+    .margin({ bottom: 8 })
   }
 }
 
 // ---------------------------------------------------------------------------
-// 数字块
+// 一格数
 // ---------------------------------------------------------------------------
 
 /**
- * 大数字 + 单位 + 标签。
- *
- * 排版要点（照着做就不会「廉价」）：
- *   · 数字与标签**不同色**（数字用语义色，标签用 Ink.L2），靠色彩拉开层级；
- *   · 单位比数字小两档、且**底部对齐**，不要居中 —— 居中会让数字显得矮；
- *   · 数字不用 Bold 以外的字重，也不用 Display 级（三宫格里 24–26 最稳）。
+ * 标签在上、数值在下、整体左对齐 —— 印刷表格里「指标 + 数值」的标准排法。
+ * 数字必须 tnum，否则每格宽度会随数字变化而抖动。
  */
 @Component
 export struct StatTile {
   @Prop value: string = '0';
   @Prop unit: string = '';
   @Prop label: string = '';
-  @Prop valueColor: string = Brand.PRIMARY;
+  @Prop valueColor: string = Ink.L1;
 
   build() {
     Column() {
+      Text(this.label)
+        .fontSize(FontSize.CAPTION)
+        .fontColor(Ink.L3)
+        .letterSpacing(0.8)
+        .width('100%')
+
       Row() {
         Text(this.value)
           .fontSize(FontSize.TITLE_M)
           .fontWeight(Weight.DISPLAY)
           .fontColor(this.valueColor)
+          .fontFeature('"tnum" 1')
         if (this.unit.length > 0) {
           Text(this.unit)
-            .fontSize(FontSize.BODY_S)
+            .fontSize(FontSize.CAPTION)
             .fontColor(Ink.L3)
-            .margin({ left: 3, bottom: 3 })
+            .margin({ left: 2, bottom: 3 })
         }
       }
       .alignItems(VerticalAlign.Bottom)
-
-      Text(this.label)
-        .fontSize(FontSize.BODY_S)
-        .fontColor(Ink.L2)
-        .margin({ top: 5 })
+      .width('100%')
+      .margin({ top: 2 })
     }
     .layoutWeight(1)
-    .alignItems(HorizontalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
+    .padding({ left: 0 })
   }
 }
 
 // ---------------------------------------------------------------------------
-// 胶囊
+// 筛选器
 // ---------------------------------------------------------------------------
 
-/** 胶囊标签 / 筛选器。选中态用主色实底，未选中用「白底 + 描边」 */
+/** 方角筛选器。选中 = 墨底纸字，未选中 = 纸底墨字 + 细框。没有胶囊。 */
 @Component
 export struct Chip {
   @Prop label: string = '';
   @Prop selected: boolean = false;
-  @Prop activeColor: string = Brand.PRIMARY;
+  @Prop activeColor: string = '';
   onTap: () => void = () => {
   };
 
   build() {
     Text(this.label)
-      .fontSize(FontSize.BODY_M)
-      .fontWeight(this.selected ? Weight.SUBTITLE : Weight.BODY)
+      .fontSize(FontSize.BODY_S)
+      .letterSpacing(0.5)
       .fontColor(this.selected ? Ink.ON_BRAND : Ink.L2)
-      .backgroundColor(this.selected ? this.activeColor : Bg.SUBTLE)
-      .borderRadius(Radius.FULL)
-      .borderWidth(1)
-      .borderColor(this.selected ? this.activeColor : Edge.NORMAL)
-      .padding({ left: 16, right: 16, top: 7, bottom: 7 })
+      .backgroundColor(this.selected ? Ink.L1 : Color.Transparent)
+      .borderRadius(Radius.XS)
+      .borderWidth(0.8)
+      .borderColor(this.selected ? Ink.L1 : Rule.HAIR)
+      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
       .margin({ right: Space.SM, bottom: Space.SM })
       .onClick(() => {
         this.onTap();
@@ -287,15 +409,13 @@ export struct Chip {
 }
 
 // ---------------------------------------------------------------------------
-// 带进度条的排行行
+// 分类明细行
 // ---------------------------------------------------------------------------
 
 /**
- * 分类明细行。
- *
- * v1 是一行「类目名 …… 绿色数字」，四行里有三行是 0，看起来像表格。
- * 这里加了：色点（和饼图/柱状图同色，形成呼应）+ 百分比 + 渐变进度条。
- * 不画比例关系，读者就得自己算 —— 这是「有数据但不好看」的典型。
+ * 一行账目：色标 + 名称 + 引导点线 + 数值 + 百分比，下面压一条 3vp 的比例条。
+ * 点线是这套界面的签名元素 —— 它把「名称」和「金额」在视觉上连成一行账，
+ * 而不是两个各说各话的文本。
  */
 @Component
 export struct RankRow {
@@ -307,52 +427,47 @@ export struct RankRow {
   build() {
     Column() {
       Row() {
-        // 8 圆点：与图表配色一一对应
         Column()
-          .width(8)
-          .height(8)
-          .borderRadius(Radius.FULL)
+          .width(6)
+          .height(6)
           .backgroundColor(this.color)
-          .margin({ right: Space.SM })
+          .margin({ right: 7 })
 
         Text(this.label)
           .fontSize(FontSize.BODY_M)
           .fontColor(Ink.L2)
-          .layoutWeight(1)
+          .letterSpacing(0.4)
+
+        DottedRule({ dotColor: Rule.DASH })
 
         Text(this.value)
           .fontSize(FontSize.BODY_M)
-          .fontWeight(Weight.SUBTITLE)
           .fontColor(Ink.L1)
+          .fontFeature('"tnum" 1')
+
         Text(`${this.percent}%`)
-          .fontSize(FontSize.BODY_S)
+          .fontSize(FontSize.CAPTION)
           .fontColor(Ink.L3)
-          .width(44)
+          .fontFeature('"tnum" 1')
+          .width(40)
           .textAlign(TextAlign.End)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
-      // 进度条：底槽用 6% 的主色，填充用横向渐变
       Stack({ alignContent: Alignment.Start }) {
         Column()
           .width('100%')
-          .height(6)
-          .borderRadius(Radius.FULL)
-          .backgroundColor(Bg.SUBTLE)
+          .height(3)
+          .backgroundColor(Bg.SUNKEN)
         Column()
           .width(`${this.percent}%`)
-          .height(6)
-          .borderRadius(Radius.FULL)
-          .linearGradient({
-            angle: 90,
-            // 用同色但左端 70% 透明度做「推进感」，避免纯色条的呆板
-            colors: [[`#B3${this.color.substring(1)}`, 0.0], [this.color, 1.0]]
-          })
+          .height(3)
+          .backgroundColor(this.color)
       }
       .width('100%')
-      .height(6)
-      .margin({ top: 7 })
+      .height(3)
+      .margin({ top: 6 })
     }
     .width('100%')
     .margin({ bottom: Space.MD })
@@ -363,27 +478,18 @@ export struct RankRow {
 // 环形进度
 // ---------------------------------------------------------------------------
 
-/**
- * 环形进度。
- *
- * API 12 的 Progress 组件只收单色 color，做不出渐变拖尾，
- * 所以这里用 Stack 叠两个 Circle + 一个带扫描渐变的圆环：
- *   底层  —— 半透明白底环
- *   上层  —— 用 Progress(Ring) 画出实际进度（保证与系统动效一致）
- * 中心放内容由调用方通过 BuilderParam 决定。
- */
 @Component
 export struct RingStat {
   @Prop percent: number = 0;
   @Prop diameter: number = 88;
-  @Prop ringWidth: number = 7;
+  @Prop ringWidth: number = 3;
   @Prop trackColor: string = Edge.ON_BRAND;
-  @Prop ringColor: string = Ink.ON_BRAND;
+  @Prop ringColor: string = SealColor.RED;
   @BuilderParam content: () => void;
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      Progress({ value: 0, total: 100, type: ProgressType.Ring })
+      Progress({ value: 100, total: 100, type: ProgressType.Ring })
         .width(this.diameter)
         .height(this.diameter)
         .color(this.trackColor)
@@ -416,25 +522,19 @@ export struct EmptyHint {
 
   build() {
     Column() {
-      Column() {
-        Image(this.icon)
-          .width(30)
-          .height(30)
-          .fillColor(Brand.LIME)
-          .objectFit(ImageFit.Contain)
-      }
-      .width(60)
-      .height(60)
-      .borderRadius(Radius.FULL)
-      .backgroundColor(Brand.MIST)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
+      Text('——')
+        .fontFamily(Serif.FAMILY)
+        .fontSize(15)
+        .fontColor(Ink.L4)
+        .letterSpacing(2)
 
       Text(this.title)
-        .fontSize(FontSize.SUB_M)
-        .fontWeight(Weight.SUBTITLE)
-        .fontColor(Ink.L1)
-        .margin({ top: Space.MD })
+        .fontFamily(Serif.FAMILY)
+        .fontSize(FontSize.BODY_M)
+        .fontColor(Ink.L2)
+        .letterSpacing(1)
+        .margin({ top: 8 })
+
       if (this.desc.length > 0) {
         Text(this.desc)
           .fontSize(FontSize.BODY_S)
@@ -445,60 +545,55 @@ export struct EmptyHint {
       }
     }
     .width('100%')
-    .padding({ top: 28, bottom: 28, left: Space.LG, right: Space.LG })
-    .backgroundColor(Bg.CARD)
-    .borderRadius(Radius.MD)
-    .shadow(shadowCard())
+    .padding({ top: 26, bottom: 26, left: Space.LG, right: Space.LG })
+    .backgroundColor(Color.Transparent)
     .alignItems(HorizontalAlign.Center)
   }
 }
 
 // ---------------------------------------------------------------------------
-// 信息行（我的页 / 同步面板用）
+// 账目行
 // ---------------------------------------------------------------------------
 
-/** 带图标的「标签 —— 值」行，替代 v1 的纯文字调试面板观感 */
+/** 「项 —— 值」：左名称、右数值，中间点线。我的页 / 同步面板用。 */
 @Component
 export struct InfoRow {
   @Prop label: string = '';
   @Prop value: string = '';
   @Prop icon: Resource = $r('app.media.ic_check');
-  @Prop showIcon: boolean = true;
+  @Prop showIcon: boolean = false;
   @Prop valueColor: string = Ink.L1;
   @Prop showDivider: boolean = false;
 
   build() {
     Column() {
       Row() {
-        if (this.showIcon) {
-          Image(this.icon)
-            .width(15)
-            .height(15)
-            .fillColor(Ink.L3)
-            .objectFit(ImageFit.Contain)
-            .margin({ right: Space.SM })
-        }
         Text(this.label)
-          .fontSize(FontSize.BODY_M)
-          .fontColor(Ink.L2)
-          .layoutWeight(1)
+          .fontSize(FontSize.BODY_S)
+          .fontColor(Ink.L3)
+          .letterSpacing(0.4)
+
+        DottedRule({ dotColor: Rule.DASH })
+
         Text(this.value)
-          .fontSize(FontSize.BODY_M)
-          .fontWeight(Weight.SUBTITLE)
+          .fontSize(FontSize.BODY_S)
           .fontColor(this.valueColor)
+          .fontFeature('"tnum" 1')
           .textAlign(TextAlign.End)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
       if (this.showDivider) {
         Divider()
-          .color(Edge.HAIR)
+          .color(Rule.HAIR)
           .strokeWidth(1)
-          .margin({ top: Space.MD })
+          .margin({ top: 10 })
       }
     }
     .width('100%')
-    .padding({ top: 9, bottom: 9 })
+    .padding({ top: 8, bottom: 8 })
   }
 }

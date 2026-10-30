@@ -24,9 +24,20 @@ import { CategoryBarChart, CategoryPieChart, ChartPayload, TrendLineChart } from
 import { SmartService } from './SmartService';
 import { catColor, CardTitle, Chip, EmptyHint, HeroCard, RankRow, RingStat, SectionCard } from './Common';
 import {
-  Bg, Brand, Edge, FontSize, Heat, Ink, Motion, Radius, Semantic, Space, Weight,
+  Bg, Brand, Edge, FontSize, Heat, Ink, Motion, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   shadowCard
 } from '../common/Theme';
+
+/** 线描树的一段枝条（绝对坐标，交给 Path 画） */
+interface TreeSegment {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  w: number;
+  /** 层级：0 = 末梢（叶子长在这里） */
+  d: number;
+}
 
 /** 时间粒度 */
 enum Grain {
@@ -82,7 +93,7 @@ export struct DashboardPage {
 
   @State grain: string = Grain.WEEK;
   @State rangeSaved: number = 0;
-  @State total: number = 0;
+  @State @Watch('onTotalChanged') total: number = 0;
   @State count: number = 0;
   @State byCat: CategoryTotal[] = [];
   @State rangeCount: number = 0;
@@ -440,151 +451,311 @@ export struct DashboardPage {
     return `本${grainLabel(this.grain)}已减排 ${this.rangeSaved} kg CO₂e，共 ${this.rangeCount} 条记录`;
   }
 
+  /** Canvas 绘制上下文（树的坐标用 vp，和布局单位一致） */
+  private settings: RenderingContextSettings = new RenderingContextSettings(true);
+  private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
+  private treePainted: boolean = false;
+
+  onTotalChanged(): void {
+    this.paintTree();
+  }
+
+  /**
+   * 画树：骨架是线，树冠是点。
+   *
+   * 只画枝条时，一棵树在暗底上会退化成「几根抽象的线」——远看什么都认不出。
+   * 让叶子成为**面积**（一堆点聚成树冠）之后，剪影才闭合，一眼就是一棵树；
+   * 而每一片叶子的数量由「累计减排」决定，繁茂程度本身就是数据。
+   */
+  private paintTree(): void {
+    if (!this.treePainted) {
+      return;
+    }
+    const W: number = 288;
+    const H: number = 232;
+    const segs: TreeSegment[] = this.treeSegs();
+    this.ctx.clearRect(0, 0, W, H);
+
+    // 枝条：数据越多越实
+    const g: number = Math.min(1, this.total / 15);
+    const inkA: number = 0.40 + 0.28 * g;
+    this.ctx.lineCap = 'round';
+    this.ctx.strokeStyle = `rgba(32,29,23,${inkA.toFixed(3)})`;
+    const cx0: number = 144;
+    const cy0: number = 106;
+    const rx0: number = 34 + g * 56;
+    const ry0: number = 24 + g * 38;
+    for (let i = 0; i < segs.length; i++) {
+      // 外层枝条若整段落在树冠之外，就不画 —— 否则会留下一圈「枯枝」戳出轮廓
+      if (segs[i].d <= 1) {
+        // 端点出冠就整段丢掉：只判「两端都在外」会留下一截截戳出轮廓的枯枝
+        const inB: boolean = this.inCrown(segs[i].x1, segs[i].y1, cx0, cy0, rx0, ry0);
+        if (!inB) {
+          continue;
+        }
+      }
+      this.ctx.beginPath();
+      this.ctx.lineWidth = segs[i].w;
+      this.ctx.moveTo(segs[i].x0, segs[i].y0);
+      this.ctx.lineTo(segs[i].x1, segs[i].y1);
+      this.ctx.stroke();
+    }
+
+    // 树冠：一团叶。锚点沿枝条撒会变成「枝上挂葡萄」，剪影不闭合；
+    // 真正让树一眼可辨的是**一团连续的面**，所以叶子按椭圆区域撒点，
+    // 枝条只负责在冠内做骨架。
+    const cx: number = cx0;
+    const cy: number = cy0;
+    const rx: number = rx0;
+    const ry: number = ry0;
+    // 0 记录时不长树冠：只留一根芽
+    const leaves: number = this.total <= 0 ? 0 : Math.min(320, Math.round(20 + this.total * 17));
+    for (let i = 0; i < leaves; i++) {
+      const a: number = this.hash(i * 3 + 0.7) * Math.PI * 2;
+      const rr: number = Math.sqrt(this.hash(i * 3 + 1.7));
+      const h: number = this.hash(i * 3 + 2.7);
+      // 边缘稍微稀疏一点：rr^0.85 让粒子更靠外，冠的轮廓才明显
+      const rr2: number = Math.pow(rr, 0.85);
+      const x: number = cx + Math.cos(a) * rr2 * rx;
+      const y: number = cy + Math.sin(a) * rr2 * ry * 0.92;
+      const r: number = 1.7 + h * 1.6;
+      if (i % 64 === 0) {
+        this.ctx.fillStyle = 'rgba(171,58,40,0.85)';
+      } else if (h > 0.62) {
+        this.ctx.fillStyle = 'rgba(94,156,124,0.42)';
+      } else if (h > 0.30) {
+        this.ctx.fillStyle = 'rgba(46,122,87,0.50)';
+      } else {
+        this.ctx.fillStyle = 'rgba(29,92,67,0.55)';
+      }
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, r, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+
+    // 一道地平线，让树「站住」——没有它，树是浮在深色里的
+    this.ctx.strokeStyle = 'rgba(32,29,23,0.20)';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(44, 218);
+    this.ctx.lineTo(244, 218);
+    this.ctx.stroke();
+  }
+
+  /** 点是否落在树冠椭圆内（稍微放宽 8%，避免边缘被裁得太硬） */
+  private inCrown(x: number, y: number, cx: number, cy: number, rx: number, ry: number): boolean {
+    const dx: number = (x - cx) / (rx * 1.08);
+    const dy: number = (y - cy) / (ry * 1.08);
+    return dx * dx + dy * dy <= 1;
+  }
+
+  /** 确定性伪随机：同一份数据每次画出来完全一样 */
+  private hash(n: number): number {
+    const r: number = Math.sin(n * 127.1) * 43758.5453;
+    return r - Math.floor(r);
+  }
+
+  /**
+   * 线描树：把「累计减排」画成一棵会长大的树。
+   * 枝的层数 = 生长阶段（0 记录时只有一根芽），主枝长度 = 累计量。
+   * 用 Path 的绝对坐标画，不用「矩形 + rotate」——后者的旋转/定位在 Stack 里
+   * 会互相干扰（第一版就是这么把一棵树渲染成了三棵），Path 一次成型、还更清晰。
+   */
+  private treeSegs(): TreeSegment[] {
+    const out: TreeSegment[] = [];
+    const g: number = Math.min(1, this.total / 15);
+    const trunk: number = 40 + g * 40;
+    const depth: number = this.total <= 0 ? 1 : (this.total < 3 ? 2 : (this.total < 10 ? 3 : 4));
+    this.grow(out, 144, 216, trunk, 0, 3.6, depth);
+    return out;
+  }
+
+  private grow(out: TreeSegment[], x: number, y: number, len: number,
+    ang: number, w: number, depth: number): void {
+    const rad: number = ang * Math.PI / 180;
+    const ex: number = x + Math.sin(rad) * len;
+    const ey: number = y - Math.cos(rad) * len;
+    out.push({ x0: x, y0: y, x1: ex, y1: ey, w: w, d: depth });
+    if (depth <= 0) {
+      return;
+    }
+    const spread: number = 24 + depth * 6;
+    this.grow(out, ex, ey, len * 0.70, ang - spread, Math.max(0.7, w * 0.62), depth - 1);
+    this.grow(out, ex, ey, len * 0.70, ang + spread, Math.max(0.7, w * 0.62), depth - 1);
+  }
+
+  /**
+   * 一句话：数字告诉人「发生了什么」，句子告诉人「现在该干什么」。
+   * 不引因子库做换算，避免为了造句在页面里塞业务耦合。
+   */
+  private todayLine(): string {
+    if (this.todaySaved >= DAILY_GOAL) {
+      return '今日额度记满，明天继续。';
+    }
+    if (this.todaySaved <= 0) {
+      return '今天还没开张 —— 记一笔，账上就有了。';
+    }
+    return `还差 ${(DAILY_GOAL - this.todaySaved).toFixed(2)} kg，再记一笔就够。`;
+  }
+
   build() {
     Column() {
       Scroll() {
         Column() {
           // ============ 英雄区：累计减排 + 今日目标环 ============
-          HeroCard({ variant: 'deep' }) {
-            Row() {
-              Column() {
-                Text('累计减排')
-                  .fontSize(FontSize.BODY_S)
-                  .fontColor(Ink.ON_BRAND_3)
+          HeroCard({ variant: 'deep', period: `${this.count} 条`, stamp: '碳迹', days: this.streak }) {
+            Column() {
+              Text('累 计 减 排')
+                .fontSize(10)
+                .fontColor(Ink.ON_BRAND_3)
+                .letterSpacing(3)
+                .width('100%')
 
-                Row() {
-                  Text(`${this.total}`)
-                    .fontSize(FontSize.DISPLAY_M)
-                    .fontWeight(Weight.DISPLAY)
-                    .fontColor(Ink.ON_BRAND)
-                    // 数字等宽：让「352」变成「353」时每个字形宽度不变，数字动效不左右抖。
-                    // ss01 是官方文档给出的示例标签；OpenType 标准的 tnum 未在文档列出，
-                    // 二者都试过，本机（HarmonyOS 7.0 / API 26 模拟器）都渲染正常。
-                    .fontFeature('"ss01" on')
-                  Text('kg')
-                    .fontSize(FontSize.SUB_M)
-                    .fontColor(Ink.ON_BRAND_2)
-                    .margin({ left: 5, bottom: 7 })
-                }
-                .alignItems(VerticalAlign.Bottom)
-
-                Text(`CO₂e · 折合 ${this.trees()} 棵树·年`)
-                  .fontSize(FontSize.BODY_S)
-                  .fontColor(Ink.ON_BRAND_3)
-                  .margin({ top: 2 })
-              }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
-
-              RingStat({ percent: this.goalPercent(), diameter: 88, ringWidth: 7 }) {
-                Text(`${this.goalPercent()}%`)
-                  .fontSize(FontSize.TITLE_S)
-                  .fontWeight(Weight.SUBTITLE)
+              Row() {
+                Text(`${this.total}`)
+                  .fontFamily(Serif.FAMILY)
+                  .fontSize(52)
                   .fontColor(Ink.ON_BRAND)
-                Text('今日目标')
-                  .fontSize(FontSize.CAPTION)
-                  .fontColor(Ink.ON_BRAND_2)
-                  .margin({ top: 1 })
+                  .fontFeature('"tnum" 1')
+                Column() {
+                  Text('kg')
+                    .fontSize(12)
+                    .fontColor(Ink.ON_BRAND_2)
+                  Text('CO₂e')
+                    .fontSize(9)
+                    .fontColor(Ink.ON_BRAND_3)
+                    .margin({ top: 1 })
+                }
+                .alignItems(HorizontalAlign.Start)
+                .margin({ left: 7, bottom: 12 })
               }
+              .alignItems(VerticalAlign.Bottom)
+              .width('100%')
+
+              Text(`折合 ${this.trees()} 棵树·年`)
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_3)
+                .width('100%')
+                .margin({ top: 2 })
+
+              Stack({ alignContent: Alignment.Start }) {
+                Column()
+                  .width('100%')
+                  .height(2)
+                  .backgroundColor('#33F7F2E6')
+                Column()
+                  .width(`${this.goalPercent()}%`)
+                  .height(2)
+                  .backgroundColor(Seal.RED)
+              }
+              .width('100%')
+              .height(2)
+              .margin({ top: 16 })
+
+              Row() {
+                Text('今 日 目 标')
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .letterSpacing(1)
+                Text(`${this.todaySaved.toFixed(2)} / ${DAILY_GOAL.toFixed(2)} kg`)
+                  .fontSize(11)
+                  .fontColor(Ink.ON_BRAND_2)
+                  .fontFeature('"tnum" 1')
+                  .margin({ left: 8 })
+                Blank()
+                Text(`共 ${this.count} 条`)
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .fontFeature('"tnum" 1')
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .margin({ top: 8 })
+
+              Text(this.todayLine())
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_2)
+                .lineHeight(18)
+                .width('100%')
+                .margin({ top: 10 })
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+          }
+
+          // ============ 我的树 ============
+          // 一棵会长的树，画在**纸上**而不是深墨底上：墨线 + 绿叶，
+          // 对比度立刻上来，远看就是一棵树 —— 深底上的浅线永远只是「几根线」。
+          Column() {
+            Row() {
+              Text('我 的 树')
+                .fontFamily(Serif.FAMILY)
+                .fontSize(15)
+                .letterSpacing(2)
+                .fontColor(Ink.L1)
+                .layoutWeight(1)
+              Text('树冠越密，减得越多')
+                .fontSize(9)
+                .fontColor(Ink.L3)
+                .letterSpacing(0.5)
             }
             .width('100%')
             .alignItems(VerticalAlign.Center)
 
-            // 英雄区底部的两条小指标：把原来单独占一张白卡的三宫格收进来
+            Column().width('100%').height(1).backgroundColor(Rule.STRONG).margin({ top: 7 })
+            Column().width('100%').height(1).backgroundColor(Rule.HAIR).margin({ top: 2.5 })
+
             Row() {
-              Text(`本${grainLabel(this.grain)} ${this.rangeSaved} kg`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor(DECO_PILL)
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-              Text(`${this.count} 条记录`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor(DECO_PILL)
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                .margin({ left: Space.SM })
+              Canvas(this.ctx)
+                .width(288)
+                .height(232)
+                .onReady(() => {
+                  this.treePainted = true;
+                  this.paintTree();
+                })
             }
             .width('100%')
-            .margin({ top: Space.XL })
+            .justifyContent(FlexAlign.Center)
+
+            Text(`累计 ${this.total} kg CO₂e · 折合 ${this.trees()} 棵树·年`)
+              .fontSize(10)
+              .fontColor(Ink.L3)
+              .fontFeature('"tnum" 1')
+              .width('100%')
+              .textAlign(TextAlign.Center)
           }
+          .width('100%')
+          .padding({ left: Space.LG, right: Space.LG, top: 14, bottom: 12 })
+          .backgroundColor(Bg.CARD)
+          .backgroundImage($r('app.media.paper_card'), ImageRepeat.XY)
+          .borderRadius(Radius.MD)
+          .margin({ bottom: Space.MD })
 
           // ============ 年度报告入口 ============
           // 一张"看起来不像普通卡片"的横幅：浅色渐变底 + 图标块 + 右侧箭头。
           // 放在英雄区正下方，是因为它是整个应用里**最适合在答辩现场展示**的一屏
           // （本质是把已有数字重新排版，但情绪价值最高）。
+          // ============ 年度报告入口（账页索引行）============
           Row() {
-            Column() {
-              Image($r('app.media.ic_export'))
-                .width(19)
-                .height(19)
-                .fillColor(Brand.PRIMARY)
-                .objectFit(ImageFit.Contain)
-            }
-            .width(40)
-            .height(40)
-            .borderRadius(Radius.SM)
-            .backgroundColor(Bg.CARD)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            .margin({ right: Space.MD })
-
-            Column() {
-              Row() {
-                Text('我的年度碳迹')
-                  .fontSize(FontSize.SUB_M)
-                  .fontWeight(Weight.SUBTITLE)
-                  .fontColor(Ink.L1)
-                Text('报告')
-                  .fontSize(FontSize.CAPTION)
-                  .fontColor(Brand.PRIMARY)
-                  .backgroundColor(Bg.CARD)
-                  .borderRadius(Radius.XS)
-                  .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-                  .margin({ left: 6 })
-              }
-              .alignItems(VerticalAlign.Center)
-
-              Text('把这一年的减排汇成一页，含最长连续记录与主力贡献')
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.L2)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .margin({ top: 3 })
-            }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
-
-            Image($r('app.media.ic_arrow'))
-              .width(15)
-              .height(15)
-              .fillColor(Ink.L3)
-              .objectFit(ImageFit.Contain)
+            Text('年 度 报 告')
+              .fontFamily(Serif.FAMILY)
+              .fontSize(13)
+              .letterSpacing(1.5)
+              .fontColor(Ink.L1)
+              .layoutWeight(1)
+            Text('把这一年的减排汇成一页')
+              .fontSize(10)
+              .fontColor(Ink.L3)
+              .margin({ right: 10 })
+            Text('→')
+              .fontSize(13)
+              .fontColor(Seal.RED)
           }
           .width('100%')
           .alignItems(VerticalAlign.Center)
-          .padding(Space.MD)
-          .linearGradient({
-            angle: 135,
-            colors: [[Brand.MIST, 0.0], [Brand.SOFT, 1.0]]
-          })
-          .borderRadius(Radius.MD)
-          // 渐变描边：ArkUI 的 borderImage 原生接受 LinearGradient 作为 source
-          //（官方《边框设置》里写的是「图片边框或者渐变色边框设置接口」）。
-          // 比 `border({color})` 强的地方是：描边本身可以有明暗变化，
-          // 一条从上到下由浅入深的 1.5vp 细边，就是"这张卡被设计过"的信号。
-          .borderImage({
-            source: {
-              angle: 135,
-              colors: [[Brand.LIGHT, 0.0], [Brand.PRIMARY, 1.0]]
-            },
-            slice: { top: 1, bottom: 1, left: 1, right: 1 },
-            width: { top: 1, bottom: 1, left: 1, right: 1 },
-            repeat: RepeatMode.Stretch
-          })
-          .shadow(shadowCard())
-          .margin({ bottom: Space.MD })
+          .padding({ top: 13, bottom: 13 })
+          .border({ width: { top: 1, bottom: 1 }, color: Rule.HAIR })
+          .margin({ bottom: Space.LG })
           .onClick(() => {
             animateTo(Motion.QUICK, () => {
               this.onOpenReport();
@@ -631,18 +802,15 @@ export struct DashboardPage {
                 Image($r('app.media.ic_flame'))
                   .width(15)
                   .height(15)
-                  .fillColor(Semantic.ALERT)
+                  .fillColor(Seal.RED)
                   .objectFit(ImageFit.Contain)
                   .margin({ right: 5 })
                 Text(`连续 ${this.streak} 天`)
                   .fontSize(FontSize.BODY_M)
-                  .fontWeight(Weight.SUBTITLE)
                   .fontColor(Ink.L1)
+                  .fontFeature('"tnum" 1')
               }
               .alignItems(VerticalAlign.Center)
-              .backgroundColor(Semantic.ALERT_SOFT)
-              .borderRadius(Radius.FULL)
-              .padding({ left: 11, right: 12, top: 5, bottom: 5 })
 
               Text(`共 ${this.activeDays} 天有记录`)
                 .fontSize(FontSize.BODY_S)
@@ -777,6 +945,7 @@ export struct DashboardPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Bg.PAGE)
+    // 纸纹兼作底色（backgroundColor 会盖住 backgroundImage）
+    .backgroundImage($r('app.media.paper_page'), ImageRepeat.XY)
   }
 }

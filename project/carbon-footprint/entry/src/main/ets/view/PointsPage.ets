@@ -24,7 +24,7 @@ import { ApiCode, ApiResult, Benefit, ExchangeOrder, PlatformAccount } from '../
 import { PointsEntry } from '../model/Models';
 import { CardTitle, HeroCard, RingStat, SectionCard } from './Common';
 import {
-  Bg, Brand, Edge, FontSize, Ink, LineHeight, Radius, Semantic, Space, Weight,
+  Bg, Brand, Edge, FontSize, Ink, LineHeight, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   shadowBrand, shadowSubtle
 } from '../common/Theme';
 
@@ -327,72 +327,88 @@ export struct PointsPage {
           // ============ 主卡（第一级）：当前积分 + 目标环 ============
           // 用 HeroCard 统一「页面第一屏」的语言；右侧从装饰性勋章图标换成
           // 目标环 —— 装饰只能好看，目标环能回答「我还差多少」。
-          HeroCard({ variant: 'brand' }) {
-            Row() {
-              Column() {
-                Text('当前碳积分')
-                  .fontSize(FontSize.BODY_S)
-                  .fontColor(Ink.ON_BRAND_2)
-                Row() {
-                  Text(`${this.balance}`)
-                    .fontSize(FontSize.DISPLAY_M)
-                    .fontWeight(Weight.DISPLAY)
-                    .fontColor(Ink.ON_BRAND)
-                  Text('分')
-                    .fontSize(FontSize.SUB_S)
-                    .fontColor(Ink.ON_BRAND_2)
-                    .margin({ left: 5, bottom: 7 })
-                }
-                .alignItems(VerticalAlign.Bottom)
-                .margin({ top: 2 })
-                Text(`每减排 1 kg CO₂e 得 ${POINTS_PER_KG} 积分`)
-                  .fontSize(FontSize.BODY_S)
-                  .fontColor(Ink.ON_BRAND_2)
-                  .margin({ top: 4 })
-              }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
+          HeroCard({ variant: 'brand', period: `兑换 ${this.orders.length} 次`, stamp: '碳迹' }) {
+            Column() {
+              Text('当 前 碳 积 分')
+                .fontSize(10)
+                .fontColor(Ink.ON_BRAND_3)
+                .letterSpacing(3)
+                .width('100%')
 
-              RingStat({
-                percent: this.goalPercent(),
-                diameter: 96,
-                ringWidth: 7,
-                trackColor: Edge.ON_BRAND,
-                ringColor: Ink.ON_BRAND
-              }) {
-                Text(`${this.goalPercent()}%`)
-                  .fontSize(FontSize.TITLE_S)
-                  .fontWeight(Weight.SUBTITLE)
+              Row() {
+                Text(`${this.balance}`)
+                  .fontFamily(Serif.FAMILY)
+                  .fontSize(52)
                   .fontColor(Ink.ON_BRAND)
-                Text(this.benefits.length === 0
-                  ? '待绑定账户'
-                  : (this.goalGap() > 0 ? `还差 ${this.goalGap()} 分` : '权益全解锁'))
-                  .fontSize(FontSize.CAPTION)
+                  .fontFeature('"tnum" 1')
+                Text('分')
+                  .fontSize(12)
                   .fontColor(Ink.ON_BRAND_2)
-                  .margin({ top: 1 })
-              }
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Center)
+                  .margin({ left: 7, bottom: 12 })
 
-            // 底部两枚小胶囊：参考看板英雄区底部的写法（半透明白底）
-            Row() {
-              Text(`已兑换 ${this.orders.length} 次`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor(Edge.ON_BRAND)
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-              Text(`可用权益 ${this.usableCount()} 项`)
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.ON_BRAND)
-                .backgroundColor(Edge.ON_BRAND)
-                .borderRadius(Radius.FULL)
-                .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                .margin({ left: Space.SM })
+                Blank()
+
+                Column() {
+                  Text(this.benefits.length === 0
+                    ? '待 绑 定'
+                    : (this.goalGap() > 0 ? `还 差 ${this.goalGap()} 分` : '权 益 全 解 锁'))
+                    .fontSize(9)
+                    .fontColor(Ink.ON_BRAND_3)
+                    .letterSpacing(1.2)
+                  Text(`${this.goalPercent()}%`)
+                    .fontFamily(Serif.FAMILY)
+                    .fontSize(26)
+                    .fontColor(Ink.ON_BRAND)
+                    .fontFeature('"tnum" 1')
+                    .margin({ top: 2 })
+                }
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Bottom)
+              .width('100%')
+
+              Text(`每减排 1 kg CO₂e 得 ${POINTS_PER_KG} 积分`)
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_3)
+                .width('100%')
+                .margin({ top: 2 })
+
+              Stack({ alignContent: Alignment.Start }) {
+                Column()
+                  .width('100%')
+                  .height(2)
+                  .backgroundColor('#33F7F2E6')
+                Column()
+                  .width(`${this.goalPercent()}%`)
+                  .height(2)
+                  .backgroundColor(Seal.RED)
+              }
+              .width('100%')
+              .height(2)
+              .margin({ top: 18 })
+
+              Row() {
+                Text('可 用 权 益')
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .letterSpacing(1)
+                Text(`${this.usableCount()} 项`)
+                  .fontSize(11)
+                  .fontColor(Ink.ON_BRAND_2)
+                  .fontFeature('"tnum" 1')
+                  .margin({ left: 8 })
+                Blank()
+                Text(`已兑换 ${this.orders.length} 次`)
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .fontFeature('"tnum" 1')
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .margin({ top: 8 })
             }
             .width('100%')
-            .margin({ top: Space.XL })
+            .alignItems(HorizontalAlign.Start)
           }
 
           if (this.hint.length > 0) {
@@ -413,7 +429,6 @@ export struct PointsPage {
             title: '城市碳普惠平台',
             icon: $r('app.media.ic_sync'),
             showIcon: true,
-            badge: '创新点 3',
             badgeColor: Semantic.ALERT,
             badgeSoft: Semantic.ALERT_SOFT
           }) {
@@ -423,7 +438,7 @@ export struct PointsPage {
                 .fontColor(Ink.L2)
                 .lineHeight(LineHeight.BODY_S)
                 .width('100%')
-              Button(this.busy ? '绑定中…' : '绑定碳普惠账户')
+              Button(this.busy ? '绑定中…' : '绑定碳普惠账户', { type: ButtonType.Normal })
                 .width('100%')
                 .height(40)
                 .fontSize(FontSize.BODY_M)
@@ -431,6 +446,7 @@ export struct PointsPage {
                 .fontColor(Ink.ON_BRAND)
                 .margin({ top: Space.MD })
                 .enabled(!this.busy)
+            .borderRadius(Radius.XS)
                 .onClick(() => {
                   this.bind();
                 })
@@ -472,14 +488,15 @@ export struct PointsPage {
                 .width('100%')
                 .margin({ top: Space.XS })
 
-              Button(this.busy ? '上报中…' : `上报积分（${this.unreported}）`)
+              Button(this.busy ? '上报中…' : `上报积分（${this.unreported}）`, { type: ButtonType.Normal })
                 .width('100%')
                 .height(38)
                 .fontSize(FontSize.BODY_S)
-                .backgroundColor(Brand.SOFT)
-                .fontColor(Brand.PRIMARY)
+                .backgroundColor(this.unreported > 0 ? Ink.L1 : Bg.SUBTLE)
+                .fontColor(this.unreported > 0 ? Ink.ON_BRAND : Ink.L3)
                 .margin({ top: Space.SM })
                 .enabled(!this.busy && this.unreported > 0)
+            .borderRadius(Radius.XS)
                 .onClick(() => {
                   this.report();
                 })
@@ -534,11 +551,11 @@ export struct PointsPage {
                       .fontSize(FontSize.BODY_S)
                       .fontWeight(Weight.SUBTITLE)
                       .fontColor(this.platformPoints >= b.cost ? Semantic.ALERT : Ink.L4)
-                    Button('兑换')
+                    Button('兑换', { type: ButtonType.Normal })
                       .fontSize(FontSize.BODY_S)
                       .height(32)
                       .padding({ left: 14, right: 14 })
-                      .borderRadius(Radius.FULL)
+                      .borderRadius(Radius.XS)
                       .backgroundColor(this.platformPoints >= b.cost ? Brand.PRIMARY : Bg.SUBTLE)
                       .fontColor(this.platformPoints >= b.cost ? Ink.ON_BRAND : Ink.L3)
                       .margin({ top: 6 })
@@ -621,7 +638,7 @@ export struct PointsPage {
                   }
                   .width(44)
                   .height(44)
-                  .borderRadius(Radius.FULL)
+                  .borderRadius(Radius.XS)
                   .backgroundColor(this.balance >= bd.threshold ? Brand.PRIMARY : Bg.SUBTLE)
                   .justifyContent(FlexAlign.Center)
                   .alignItems(HorizontalAlign.Center)
@@ -696,11 +713,11 @@ export struct PointsPage {
                     .fontSize(FontSize.BODY_S)
                     .fontWeight(Weight.SUBTITLE)
                     .fontColor(this.balance >= r.cost ? Semantic.ALERT : Ink.L4)
-                  Button('兑换')
+                  Button('兑换', { type: ButtonType.Normal })
                     .fontSize(FontSize.BODY_S)
                     .height(32)
                     .padding({ left: 14, right: 14 })
-                    .borderRadius(Radius.FULL)
+                    .borderRadius(Radius.XS)
                     .backgroundColor(this.balance >= r.cost ? Brand.PRIMARY : Bg.SUBTLE)
                     .fontColor(this.balance >= r.cost ? Ink.ON_BRAND : Ink.L3)
                     .margin({ top: 6 })
@@ -769,6 +786,7 @@ export struct PointsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Bg.PAGE)
+    // 纸纹兼作底色（backgroundColor 会盖住 backgroundImage）
+    .backgroundImage($r('app.media.paper_page'), ImageRepeat.XY)
   }
 }

@@ -15,7 +15,7 @@ import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { CarbonRepository } from '../data/CarbonRepository';
-import { Bg, Brand, FontSize, Ink, Motion, Radius, Semantic, Space, Weight } from '../common/Theme';
+import { Bg, Brand, FontSize, Ink, Motion, Radius, Rule, Seal, Semantic, Serif, Space, Weight } from '../common/Theme';
 import { DashboardPage } from '../view/DashboardPage';
 import { EntryPage } from '../view/EntryPage';
 import { KnowledgePage } from '../view/KnowledgePage';
@@ -66,28 +66,28 @@ struct Index {
   @Builder
   tabItem(index: number, icon: Resource, label: string) {
     Column() {
-      Column() {
-        Image(icon)
-          .width(23)
-          .height(23)
-          .fillColor(this.currentIndex === index ? Brand.PRIMARY : Ink.L3)
-          .objectFit(ImageFit.Contain)
-          // 选中时图标轻微放大 1.08，配合胶囊一起「跳」出来
-          .scale({
-            x: this.currentIndex === index ? 1.08 : 1,
-            y: this.currentIndex === index ? 1.08 : 1
-          })
-        Text(label)
-          .fontSize(FontSize.CAPTION)
-          .fontWeight(this.currentIndex === index ? Weight.SUBTITLE : Weight.BODY)
-          .fontColor(this.currentIndex === index ? Brand.PRIMARY : Ink.L3)
-          .margin({ top: 3 })
-      }
-      .padding({ left: 14, right: 14, top: 5, bottom: 5 })
-      .borderRadius(Radius.MD)
-      .backgroundColor(this.currentIndex === index ? Brand.SOFT : Color.Transparent)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
+      Image(icon)
+        .width(19)
+        .height(19)
+        .fillColor(this.currentIndex === index ? Ink.L1 : Ink.L4)
+        .objectFit(ImageFit.Contain)
+        .scale({
+          x: this.currentIndex === index ? 1.05 : 1,
+          y: this.currentIndex === index ? 1.05 : 1
+        })
+      Text(label)
+        .fontFamily(Serif.FAMILY)
+        .fontSize(11)
+        .letterSpacing(1.5)
+        .fontWeight(this.currentIndex === index ? Weight.SUBTITLE : Weight.BODY)
+        .fontColor(this.currentIndex === index ? Ink.L1 : Ink.L4)
+        .margin({ top: 3 })
+      // 选中标记：一道朱砂短线，代替 v2 的绿色胶囊
+      Column()
+        .width(12)
+        .height(2)
+        .backgroundColor(this.currentIndex === index ? Seal.RED : Color.Transparent)
+        .margin({ top: 4 })
     }
     .width('100%')
     .height('100%')
@@ -96,7 +96,24 @@ struct Index {
   private controller: TabsController = new TabsController();
 
   aboutToAppear(): void {
+    this.registerSerif();
     this.boot();
+  }
+
+  /**
+   * 注册宋体（Noto Serif CJK SC 子集，SIL OFL 1.1，见 rawfile/fonts/NOTICE.txt）。
+   * 只给固定文案用：子集字体没有的字会渲染成豆腐块，用户输入一律走系统字体。
+   */
+  private registerSerif(): void {
+    try {
+      this.getUIContext().getFont().registerFont({
+        familyName: Serif.FAMILY,
+        familySrc: $rawfile('fonts/LedgerSerif.otf')
+      });
+    } catch (e) {
+      const err = e as BusinessError;
+      hilog.error(DOMAIN, TAG, 'serif register failed: %{public}s', JSON.stringify(err));
+    }
   }
 
   private async boot(): Promise<void> {
@@ -147,10 +164,11 @@ struct Index {
             ProfilePage({ version: this.dataVersion })
           }.tabBar(this.tabItem(4, $r('app.media.ic_tab_person'), '我的'))
         }
+        .backgroundImage($r('app.media.paper_page'), ImageRepeat.XY)
         .barMode(BarMode.Fixed)
-        .barHeight(56)
+        .barHeight(58)
         .barBackgroundColor(Bg.CARD)
-        .divider({ strokeWidth: 0.5, color: Bg.LINE })
+        .divider({ strokeWidth: 1, color: Rule.HAIR })
         .scrollable(false)
         .width('100%')
         .height('100%')
@@ -211,6 +229,7 @@ struct Index {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Bg.PAGE)
+    // 不透明纸纹同时承担底色（backgroundColor 会盖住 backgroundImage）
+    .backgroundImage($r('app.media.paper_page'), ImageRepeat.XY)
   }
 }

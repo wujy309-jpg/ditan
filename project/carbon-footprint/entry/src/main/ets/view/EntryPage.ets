@@ -13,7 +13,7 @@ import { CarbonRepository } from '../data/CarbonRepository';
 import { factorById, factorsOf } from '../data/FactorLibrary';
 import { classify, ClassifyDetail, pickFromGallery, releaseOcr } from '../ai/LowCarbonClassifier';
 import {
-  Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Semantic, Space, Weight,
+  Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   Motion, buttonGradient, shadowCard, shadowRaised
 } from '../common/Theme';
 import { HeroCard } from './Common';
@@ -321,149 +321,155 @@ export struct EntryPage {
     await this.refresh();
   }
 
+  /** 账目段标题：序号 + 宋体标题 + 双线 */
+  @Builder
+  secHead(no: string, title: string) {
+    Row() {
+      Text(no)
+        .fontFamily(Serif.FAMILY)
+        .fontSize(10)
+        .fontColor(Seal.RED)
+        .letterSpacing(1)
+        .width(24)
+      Text(title)
+        .fontFamily(Serif.FAMILY)
+        .fontSize(15)
+        .fontColor(Ink.L1)
+        .letterSpacing(2)
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+    .margin({ bottom: 7 })
+
+    Column().width('100%').height(1).backgroundColor(Rule.STRONG)
+    Column().width('100%').height(1).backgroundColor(Rule.HAIR).margin({ top: 2, bottom: 12 })
+  }
+
   build() {
     Column() {
       Scroll() {
         Column() {
-          // ===== 英雄区：主卡（第一级）=====
-          // 改用 Common.ets 的 HeroCard：20 内边距 / 32 圆角 / 高光描边 / 品牌色投影 /
-          // 装饰色斑都已内置，页面这里只描述「内容是什么」，与看板、积分页保持同一套语言。
-          HeroCard({ variant: 'brand' }) {
-            Row() {
-              Column() {
-                Text('累计减排')
-                  .fontSize(FontSize.BODY_S)
-                  .fontColor(Ink.ON_BRAND_2)
-                Row() {
-                  Text(`${this.total}`)
-                    .fontSize(FontSize.DISPLAY_M)
-                    .fontWeight(Weight.DISPLAY)
-                    .fontColor(Ink.ON_BRAND)
-                  Text('kg')
-                    .fontSize(FontSize.SUB_S)
-                    .fontColor(Ink.ON_BRAND_2)
-                    .margin({ left: 5, bottom: 7 })
-                }
-                .alignItems(VerticalAlign.Bottom)
-                .margin({ top: 2 })
+          // ===== 抬头：本期减排 =====
+          HeroCard({ variant: 'brand', period: `${today()}`, stamp: '碳迹' }) {
+            Column() {
+              Text('累 计 减 排')
+                .fontSize(10)
+                .fontColor(Ink.ON_BRAND_3)
+                .letterSpacing(3)
+                .width('100%')
 
-                Text(`CO₂e · 本周 ${this.weekTotal} kg`)
-                  .fontSize(FontSize.BODY_S)
-                  .fontColor(Ink.ON_BRAND_2)
-                  .margin({ top: 4 })
-              }
-              .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
-
-              // 环形进度：今日目标完成度。用 Progress 而不是 Canvas ——
-              // 官方提示 Canvas 不随 @State 自动重绘，环形进度用 Progress 更省心。
-              Stack() {
-                Progress({
-                  value: this.goalPercent(),
-                  total: 100,
-                  type: ProgressType.Ring
-                })
-                  .width(78)
-                  .height(78)
-                  .color(Ink.ON_BRAND)
-                  // 半透明装饰白：进度环底轨，需要露出下面的渐变底，故不取实色令牌
-                  .backgroundColor('#40FFFFFF')
-                  .style({ strokeWidth: 7 })
-
+              Row() {
+                Text(this.total.toFixed(2))
+                  .fontFamily(Serif.FAMILY)
+                  .fontSize(52)
+                  .fontColor(Ink.ON_BRAND)
+                  .fontFeature('"tnum" 1')
+                  .letterSpacing(1)
                 Column() {
-                  Row() {
-                    Text(`${this.goalPercent()}`)
-                      .fontSize(FontSize.TITLE_S)
-                      .fontWeight(Weight.SUBTITLE)
-                      .fontColor(Ink.ON_BRAND)
-                    Text('%')
-                      .fontSize(FontSize.CAPTION)
-                      .fontColor(Ink.ON_BRAND_2)
-                      .margin({ left: 1, bottom: 3 })
-                  }
-                  .alignItems(VerticalAlign.Bottom)
-
-                  Text('今日目标')
-                    .fontSize(FontSize.CAPTION)
+                  Text('kg')
+                    .fontSize(12)
                     .fontColor(Ink.ON_BRAND_2)
+                  Text('CO₂e')
+                    .fontSize(9)
+                    .fontColor(Ink.ON_BRAND_3)
                     .margin({ top: 1 })
                 }
-                .justifyContent(FlexAlign.Center)
-                .alignItems(HorizontalAlign.Center)
+                .alignItems(HorizontalAlign.Start)
+                .margin({ left: 7, bottom: 12 })
               }
-              .width(78)
-              .height(78)
+              .alignItems(VerticalAlign.Bottom)
+              .width('100%')
 
-              Column()
-                .width(1)
-                .height(46)
-                .backgroundColor(Edge.ON_BRAND)
-                .margin({ left: Space.LG, right: Space.LG })
+              Text(`折合 ${(this.total / 18.3).toFixed(1)} 棵树·年`)
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_3)
+                .width('100%')
+                .margin({ top: 2 })
 
-              Column() {
-                Text(`${this.recent.length}`)
-                  .fontSize(FontSize.TITLE_S)
-                  .fontWeight(Weight.SUBTITLE)
-                  .fontColor(Ink.ON_BRAND)
-                Text('今日记录')
-                  .fontSize(FontSize.CAPTION)
+              // 今日目标：一条 2vp 的墨色进度线，比圆环更「账」
+              Stack({ alignContent: Alignment.Start }) {
+                Column()
+                  .width('100%')
+                  .height(2)
+                  .backgroundColor('#33F7F2E6')
+                Column()
+                  .width(`${this.goalPercent()}%`)
+                  .height(2)
+                  .backgroundColor(Seal.RED)
+              }
+              .width('100%')
+              .height(2)
+              .margin({ top: 18 })
+
+              Row() {
+                Text('今日目标')
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .letterSpacing(1)
+                Text(`${this.todayTotal.toFixed(2)} / ${DAILY_GOAL.toFixed(2)} kg`)
+                  .fontSize(11)
                   .fontColor(Ink.ON_BRAND_2)
-                  .margin({ top: 2 })
+                  .fontFeature('"tnum" 1')
+                  .margin({ left: 8 })
+                Blank()
+                Text(`共 ${this.recent.length} 条`)
+                  .fontSize(10)
+                  .fontColor(Ink.ON_BRAND_3)
+                  .fontFeature('"tnum" 1')
               }
-              .alignItems(HorizontalAlign.Center)
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .margin({ top: 8 })
             }
             .width('100%')
-            .alignItems(VerticalAlign.Center)
+            .alignItems(HorizontalAlign.Start)
           }
 
-          // 创新点 2：端侧 AI 识图
+          // ===== 02 端侧识图 =====
           Column() {
-            Row() {
-              Text('端侧 AI 识图')
-                .fontSize(15)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(Ink.L1)
-                .layoutWeight(1)
-              Text('创新点 2')
-                .fontSize(10)
-                .fontColor(Semantic.ALERT)
-                .backgroundColor(Semantic.ALERT_SOFT)
-                .borderRadius(8)
-                .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-            }
-            .width('100%')
+            this.secHead('02', '端 侧 识 图')
 
             Text('拍一张照片或从相册选图，应用在本机识别低碳行为并自动预填，图片不会上传。')
-              .fontSize(11)
+              .fontSize(12)
               .fontColor(Ink.L3)
-              .lineHeight(17)
+              .lineHeight(19)
               .width('100%')
-              .margin({ top: 6 })
 
             if (this.aiPreview !== undefined) {
               Image(this.aiPreview)
                 .width('100%')
-                .height(120)
+                .height(132)
                 .objectFit(ImageFit.Cover)
-                .borderRadius(10)
+                .borderRadius(Radius.XS)
                 .margin({ top: 10 })
             }
 
-            Button(this.aiBusy ? '识别中…' : '拍照 / 选图识别')
-              .width('100%')
-              .height(40)
-              .fontSize(14)
-              .backgroundColor(Brand.PRIMARY)
-              .margin({ top: 10 })
-              .enabled(!this.aiBusy)
-              .onClick(() => {
+            Row() {
+              Text(this.aiBusy ? '识 别 中 …' : '拍 照 / 选 图')
+                .fontSize(13)
+                .letterSpacing(2)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L1)
+              Blank()
+              Text('→')
+                .fontSize(14)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L1)
+            }
+            .width('100%')
+            .height(44)
+            .padding({ left: 14, right: 14 })
+            .border({ width: 1, color: this.aiBusy ? Rule.HAIR : Ink.L1, radius: Radius.XS })
+            .margin({ top: 12 })
+            .onClick(() => {
+              if (!this.aiBusy) {
                 this.doAiRecognize();
-              })
+              }
+            })
 
             if (this.aiReason.length > 0) {
               Text(this.aiReason)
                 .fontSize(11)
-                .fontColor(this.aiApplied ? Brand.PRIMARY : Ink.L3)
+                .fontColor(this.aiApplied ? Seal.RED : Ink.L3)
                 .lineHeight(17)
                 .width('100%')
                 .margin({ top: 8 })
@@ -471,83 +477,85 @@ export struct EntryPage {
             if (this.aiApplied) {
               Text('已根据识别结果预填，可在下方修改')
                 .fontSize(11)
-                .fontColor(Brand.PRIMARY)
+                .fontColor(Seal.RED)
                 .width('100%')
                 .margin({ top: 4 })
             }
           }
           .width('100%')
-          .padding(Space.LG)
+          .padding({ left: Space.LG, right: Space.LG, top: 14, bottom: 14 })
           .backgroundColor(Bg.CARD)
           .borderRadius(Radius.MD)
-          .shadow(shadowCard())
           .margin({ bottom: Space.MD })
 
-          // 1 · 类目
+          // ===== 03 选择类目（账目行）=====
           Column() {
-            Text('1 · 选择类目')
-              .fontSize(FontSize.SUB_L)
-              .fontWeight(Weight.SUBTITLE)
-              .fontColor(Ink.L1)
+            this.secHead('03', '选 择 类 目')
+
+            ForEach(ALL_CATEGORIES, (c: string) => {
+              Row() {
+                Column()
+                  .width(2)
+                  .height(22)
+                  .backgroundColor(this.category === c ? Seal.RED : Color.Transparent)
+                  .margin({ right: 12 })
+
+                Image(this.categoryIcon(c))
+                  .width(16)
+                  .height(16)
+                  .fillColor(this.category === c ? Ink.L1 : this.categoryColor(c))
+                  .objectFit(ImageFit.Contain)
+                  .margin({ right: 10 })
+
+                Text(categoryLabel(c))
+                  .fontSize(15)
+                  .letterSpacing(1)
+                  .fontWeight(this.category === c ? Weight.SUBTITLE : Weight.BODY)
+                  .fontColor(this.category === c ? Ink.L1 : Ink.L2)
+                  .layoutWeight(1)
+
+                Text(`${factorsOf(c).length} 项`)
+                  .fontSize(11)
+                  .fontColor(Ink.L4)
+                  .fontFeature('"tnum" 1')
+                  .margin({ right: 10 })
+
+                Text(this.category === c ? '●' : '○')
+                  .fontSize(10)
+                  .fontColor(this.category === c ? Seal.RED : Ink.L4)
+              }
               .width('100%')
-              .margin({ bottom: Space.MD })
-            Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
-              ForEach(ALL_CATEGORIES, (c: string) => {
-                Column() {
-                  Image(this.categoryIcon(c))
-                    .width(26)
-                    .height(26)
-                    .fillColor(this.category === c ? Ink.ON_BRAND : this.categoryColor(c))
-                    .objectFit(ImageFit.Contain)
-                  Text(categoryLabel(c))
-                    .fontSize(FontSize.BODY_S)
-                    .fontWeight(this.category === c ? Weight.SUBTITLE : Weight.BODY)
-                    .fontColor(this.category === c ? Ink.ON_BRAND : Ink.L2)
-                    .margin({ top: 7 })
-                }
-                .width('48%')
-                .height(84)
-                .justifyContent(FlexAlign.Center)
-                .backgroundColor(this.category === c
-                  ? this.categoryColor(c)
-                  : this.categorySoft(c))
-                .borderRadius(Radius.MD)
-                // 只有选中的那一块浮起来；未选中态保持平贴的浅色底
-                .shadow(this.category === c ? shadowRaised() : noShadow())
-                .margin({ bottom: Space.SM })
-                .onClick(() => {
-                  animateTo(Motion.QUICK, () => {
-                    this.pickCategory(c);
-                  });
-                })
-              }, (c: string) => c)
-            }
-            .width('100%')
+              .height(48)
+              .alignItems(VerticalAlign.Center)
+              .border({ width: { bottom: 1 }, color: Rule.HAIR })
+              .onClick(() => {
+                animateTo(Motion.QUICK, () => {
+                  this.pickCategory(c);
+                });
+              })
+            }, (c: string) => c)
           }
           .width('100%')
-          .padding(Space.LG)
+          .padding({ left: Space.LG, right: Space.LG, top: 14, bottom: 6 })
           .backgroundColor(Bg.CARD)
           .borderRadius(Radius.MD)
-          .shadow(shadowCard())
           .margin({ bottom: Space.MD })
 
-          // 2 · 具体行为
+          // ===== 04 选择行为 =====
           Column() {
-            Text('2 · 选择行为')
-              .fontSize(FontSize.SUB_L)
-              .fontWeight(Weight.SUBTITLE)
-              .fontColor(Ink.L1)
-              .width('100%')
-              .margin({ bottom: Space.MD })
+            this.secHead('04', '选 择 行 为')
+
             Flex({ wrap: FlexWrap.Wrap }) {
               ForEach(factorsOf(this.category), (f: Factor) => {
                 Text(f.name)
-                  .fontSize(FontSize.BODY_M)
-                  .fontWeight(this.factorId === f.id ? Weight.SUBTITLE : Weight.BODY)
+                  .fontSize(13)
+                  .letterSpacing(0.5)
                   .fontColor(this.factorId === f.id ? Ink.ON_BRAND : Ink.L2)
-                  .backgroundColor(this.factorId === f.id ? Brand.PRIMARY : Bg.SUBTLE)
-                  .borderRadius(Radius.FULL)
-                  .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+                  .backgroundColor(this.factorId === f.id ? Ink.L1 : Color.Transparent)
+                  .borderRadius(Radius.XS)
+                  .borderWidth(0.8)
+                  .borderColor(this.factorId === f.id ? Ink.L1 : Rule.HAIR)
+                  .padding({ left: 12, right: 12, top: 7, bottom: 7 })
                   .margin({ right: 8, bottom: 8 })
                   .onClick(() => {
                     this.factorId = f.id;
@@ -557,111 +565,132 @@ export struct EntryPage {
             .width('100%')
 
             if (this.hasFactor()) {
-              // 微卡（第三级）：浅底、无阴影、小圆角。用于承托「出处」这类次要但重要的信息。
               Column() {
-                Text(`${this.factor().savedPerUnit} kg CO₂e / ${this.factor().unit}`)
-                  .fontSize(FontSize.BODY_M)
-                  .fontWeight(Weight.SUBTITLE)
-                  .fontColor(Brand.DEEP)
-                  .width('100%')
-                Text(`基准：${this.factor().baseline}`)
-                  .fontSize(FontSize.BODY_S)
+                Row() {
+                  Text('因子')
+                    .fontSize(10)
+                    .fontColor(Ink.L3)
+                    .letterSpacing(1)
+                  Blank()
+                  Text(`${this.factor().savedPerUnit} kg CO₂e / ${this.factor().unit}`)
+                    .fontSize(13)
+                    .fontColor(Ink.L1)
+                    .fontFeature('"tnum" 1')
+                }
+                .width('100%')
+
+                Text(`基准 · ${this.factor().baseline}`)
+                  .fontSize(11)
                   .fontColor(Ink.L2)
                   .width('100%')
-                  .margin({ top: 4 })
-                Text(`出处：${this.factor().source}`)
-                  .fontSize(FontSize.CAPTION)
+                  .margin({ top: 6 })
+                Text(`出处 · ${this.factor().source}`)
+                  .fontSize(10)
                   .fontColor(Ink.L3)
                   .width('100%')
                   .margin({ top: 3 })
               }
               .width('100%')
-              .padding(Space.MD)
-              .backgroundColor(Bg.SUBTLE)
-              .borderRadius(Radius.SM)
-              .margin({ top: Space.MD })
+              .padding({ top: 10, bottom: 10 })
+              .margin({ top: 6 })
+              .border({ width: { top: 1, bottom: 1 }, color: Rule.HAIR })
             }
           }
           .width('100%')
-          .padding(Space.LG)
+          .padding({ left: Space.LG, right: Space.LG, top: 14, bottom: 14 })
           .backgroundColor(Bg.CARD)
           .borderRadius(Radius.MD)
-          .shadow(shadowCard())
           .margin({ bottom: Space.MD })
 
-          // 3 · 数量与日期
+          // ===== 05 数量与日期 =====
           Column() {
-            Text('3 · 填写数量与日期')
-              .fontSize(FontSize.SUB_L)
-              .fontWeight(Weight.SUBTITLE)
-              .fontColor(Ink.L1)
-              .width('100%')
-              .margin({ bottom: Space.MD })
+            this.secHead('05', '数 量 与 日 期')
 
             Row() {
-              TextInput({ placeholder: '数量', text: this.amount })
+              TextInput({ placeholder: '0.00', text: this.amount })
                 .type(InputType.NUMBER_DECIMAL)
+                .placeholderColor(Ink.L4)
                 .layoutWeight(1)
-                .height(44)
+                .height(40)
+                .padding({ left: 0 })
+                .backgroundColor(Color.Transparent)
+                .borderRadius(0)
+                .border({ width: { bottom: 1 }, color: Rule.STRONG })
+                .fontSize(20)
+                .fontFeature('"tnum" 1')
                 .onChange((v: string) => {
                   this.amount = v;
                 })
               Text(this.factor().unit)
-                .fontSize(14)
-                .fontColor(Ink.L2)
+                .fontSize(12)
+                .fontColor(Ink.L3)
                 .margin({ left: 10 })
             }
             .width('100%')
+            .alignItems(VerticalAlign.Bottom)
+            .margin({ top: 4 })
 
             Row() {
               TextInput({ placeholder: 'YYYY-MM-DD', text: this.date })
+                .placeholderColor(Ink.L4)
                 .layoutWeight(1)
-                .height(44)
+                .height(40)
+                .padding({ left: 0 })
+                .backgroundColor(Color.Transparent)
+                .borderRadius(0)
+                .border({ width: { bottom: 1 }, color: Rule.HAIR })
+                .fontSize(14)
+                .fontFeature('"tnum" 1')
                 .onChange((v: string) => {
                   this.date = v;
                 })
-              Button('今天')
-                .fontSize(13)
-                .height(36)
-                .backgroundColor(Brand.SOFT)
-                .fontColor(Brand.PRIMARY)
-                .margin({ left: 10 })
+              Text('今 天')
+                .fontSize(11)
+                .letterSpacing(1)
+                .fontColor(Seal.RED)
+                .padding({ left: 10, top: 6, bottom: 6 })
                 .onClick(() => {
                   this.date = today();
                 })
             }
             .width('100%')
-            .margin({ top: 10 })
+            .alignItems(VerticalAlign.Bottom)
+            .margin({ top: 14 })
 
             Row() {
-              Text('本次减排')
-                .fontSize(13)
-                .fontColor(Ink.L2)
+              Text('本 次 减 排')
+                .fontSize(11)
+                .fontColor(Ink.L3)
+                .letterSpacing(1)
+              Blank()
               Text(this.preview())
-                .fontSize(15)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(Brand.PRIMARY)
-                .margin({ left: 8 })
+                .fontFamily(Serif.FAMILY)
+                .fontSize(24)
+                .fontColor(Ink.L1)
+                .fontFeature('"tnum" 1')
+              Text('kg')
+                .fontSize(10)
+                .fontColor(Ink.L3)
+                .margin({ left: 3, bottom: 3 })
             }
             .width('100%')
-            .margin({ top: 12 })
+            .alignItems(VerticalAlign.Bottom)
+            .margin({ top: 20 })
           }
           .width('100%')
-          .padding(Space.LG)
+          .padding({ left: Space.LG, right: Space.LG, top: 14, bottom: 16 })
           .backgroundColor(Bg.CARD)
           .borderRadius(Radius.MD)
-          .shadow(shadowCard())
           .margin({ bottom: Space.MD })
 
-          Button('保 存')
+          // ===== 保存 =====
+          Button('保 存', { type: ButtonType.Normal })
             .width('100%')
-            .height(48)
-            .fontSize(16)
+            .height(50)
+            .fontSize(15)
             .fontColor(Ink.ON_BRAND)
-            // 官方约束：Button 设渐变前必须把 backgroundColor 置为透明，否则实色底会盖住渐变
-            .backgroundColor(Color.Transparent)
-            .linearGradient(buttonGradient())
-            .borderRadius(Radius.FULL)
+            .backgroundColor(Ink.L1)
+            .borderRadius(Radius.XS)
             .onClick(() => {
               animateTo(Motion.QUICK, () => {
                 this.save();
@@ -670,70 +699,72 @@ export struct EntryPage {
 
           if (this.hint.length > 0) {
             Text(this.hint)
-              .fontSize(13)
+              .fontSize(11)
               .fontColor(this.hintOk ? Brand.PRIMARY : Semantic.WARNING)
+              .letterSpacing(0.5)
               .width('100%')
               .margin({ top: 10 })
           }
 
-          // 最近记录
+          // ===== 最近记录 =====
           if (this.recent.length > 0) {
             Column() {
-              Text('最近记录')
-                .fontSize(15)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(Ink.L1)
-                .width('100%')
-                .margin({ bottom: 10 })
+              this.secHead('06', '最 近 记 录')
+
               ForEach(this.recent, (r: BehaviorRecord) => {
                 Row() {
+                  Text(r.date.substring(5))
+                    .fontSize(10)
+                    .fontColor(Ink.L3)
+                    .fontFeature('"tnum" 1')
+                    .width(44)
+
                   Column() {
-                    Text(`${r.name}  ${r.amount}${r.unit}`)
-                      .fontSize(14)
+                    Text(r.name)
+                      .fontSize(13)
                       .fontColor(Ink.L1)
-                    Text(`${r.date} · ${categoryLabel(r.category)}`)
-                      .fontSize(11)
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    Text(`${r.amount}${r.unit} · ${categoryLabel(r.category)}`)
+                      .fontSize(10)
                       .fontColor(Ink.L3)
                       .margin({ top: 2 })
                   }
                   .alignItems(HorizontalAlign.Start)
                   .layoutWeight(1)
 
-                  Text(`-${r.saved}`)
+                  Text(`−${r.saved}`)
                     .fontSize(14)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor(Brand.PRIMARY)
+                    .fontColor(Ink.L1)
+                    .fontFeature('"tnum" 1')
                   Text('kg')
-                    .fontSize(11)
+                    .fontSize(9)
                     .fontColor(Ink.L3)
                     .margin({ left: 2 })
 
-                  Button('删')
-                    .fontSize(11)
-                    .height(28)
-                    .width(40)
-                    .backgroundColor(Semantic.WARNING_SOFT)
-                    .fontColor(Semantic.WARNING)
-                    .borderRadius(Radius.FULL)
-                    .margin({ left: 10 })
+                  Text('删')
+                    .fontSize(10)
+                    .fontColor(Ink.L4)
+                    .padding({ left: 10, top: 6, bottom: 6 })
                     .onClick(() => {
                       this.remove(r.id);
                     })
                 }
                 .width('100%')
-                .padding({ top: 10, bottom: 10 })
+                .padding({ top: 11, bottom: 11 })
+                .alignItems(VerticalAlign.Center)
+                .border({ width: { bottom: 1 }, color: Rule.HAIR })
               }, (r: BehaviorRecord) => r.id)
             }
             .width('100%')
-            .padding(Space.LG)
+            .padding({ left: Space.LG, right: Space.LG, top: 14, bottom: 6 })
             .backgroundColor(Bg.CARD)
             .borderRadius(Radius.MD)
-            .shadow(shadowCard())
             .margin({ top: Space.MD })
           }
         }
         .width('100%')
-        .padding(16)
+        .padding({ left: 16, right: 16, top: 12, bottom: 24 })
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)

@@ -1,0 +1,21 @@
+LedgerSerif.otf
+--------------
+本文件是 Noto Serif CJK SC（Regular）的子集，仅保留本工程界面文案用到的
+1176 个字符（含 ASCII 数字与常用标点），由 fontTools 4.60 的 pyftsubset 生成。
+
+上游字体：Noto Serif CJK
+版权：Copyright 2017-2024 Adobe (http://www.adobe.com/), with Reserved Font
+      Name 'Source'. Noto is a trademark of Google Inc.
+许可：SIL Open Font License, Version 1.1
+      https://openfontlicense.org/open-font-license-official-text/
+
+按 OFL 要求：
+  · 允许在商业/非商业项目中嵌入、打包、再分发本字体（含子集化）；
+  · 不得单独销售字体文件本身；
+  · 保留本版权与许可声明（即本文件）。
+
+重新生成子集的方法（在 macOS + fontTools 环境下）：
+  pyftsubset NotoSerifCJK-Regular.ttc \
+    --font-number=2 --text-file=charset.txt \
+    --layout-features='kern,liga,ccmp,locl,tnum' \
+    --no-hinting --desubroutinize --output-file=LedgerSerif.otf

@@ -54,19 +54,19 @@ import {
 } from '../common/Theme';
 
 /** 主题绿 */
-const GREEN: number = 0x1F9A4E;
+const GREEN: number = 0x1D5C43;
 /**
  * 图表辅助文字：0x66 是官方文本三级的 40% 黑。
  * 注意 mpchart 的 setTextColor / setGridColor 收的是 ARGB 数值而不是 '#RRGGBB' 字符串。
  */
-const AXIS_TEXT: number = 0x66000000;
+const AXIS_TEXT: number = 0x8A7F6A;
 /** 网格与轴线——刻意做得极淡，只在需要时保留 */
-const GRID: number = 0x14000000;
+const GRID: number = 0x1AD9CFB8;
 /**
  * 幽灵线（上期）的颜色：中性灰、刻意比主线弱。
  * 它必须「看得见但不抢戏」—— 一旦用彩色，读者会以为那是第二条真实数据。
  */
-const GHOST_LINE: number = 0x33000000;
+const GHOST_LINE: number = 0x59B5AC98;
 
 /**
  * 统一清理坐标轴装饰。
@@ -152,10 +152,10 @@ function pieColors(): number[] {
   // 取值与 Theme.CatColor 严格一一对应 —— 图例的色点、进度条的颜色都取自
   // 同一套值，这样「绿色 = 出行」在整屏里是自洽的。
   return [
-    ChartColor.rgb(31, 154, 78), // CatColor.TRAVEL  #1F9A4E
-    ChartColor.rgb(10, 89, 247), // CatColor.ENERGY  #0A59F7
-    ChartColor.rgb(237, 111, 33), // CatColor.RECYCLE #ED6F21
-    ChartColor.rgb(123, 91, 214) // CatColor.FOOD    #7B5BD6
+    ChartColor.rgb(29, 92, 67),   // CatColor.TRAVEL  #1D5C43 墨绿
+    ChartColor.rgb(47, 74, 107),  // CatColor.ENERGY  #2F4A6B 靛
+    ChartColor.rgb(166, 90, 31),  // CatColor.RECYCLE #A65A1F 赭
+    ChartColor.rgb(91, 75, 107)   // CatColor.FOOD    #5B4B6B 紫
   ];
 }
 
@@ -250,7 +250,7 @@ export struct TrendLineChart {
     const fillStops: JArrayList<ChartColorStop> = new JArrayList<ChartColorStop>();
     // 面积填充：主色 30% → 全透明。色值从 Brand.PRIMARY 推导，
     // 避免在图表里再写一份绿色（改主色时这里会自动跟着变）。
-    fillStops.add([`#4D${Brand.PRIMARY.substring(1)}`, 0.0]);
+    fillStops.add([`#26${Brand.PRIMARY.substring(1)}`, 0.0]);
     fillStops.add([`#00${Brand.PRIMARY.substring(1)}`, 1.0]);
     set.setGradientFillColor(fillStops);
 

@@ -36,7 +36,7 @@ import {
 import { catColor, catSoft, EmptyHint, HeroCard, RankRow, SectionCard } from './Common';
 import {
   Bg, Brand, CatColor, Edge, ENTER_OFFSET, FontSize, Ink, LineHeight, Motion, Radius,
-  Semantic, Space, Weight, buttonGradient, shadowCard
+  Rule, Seal, Semantic, Serif, Space, Weight, buttonGradient, shadowCard
 } from '../common/Theme';
 
 const DOMAIN: number = 0x0001;
@@ -513,175 +513,135 @@ export struct YearReportPage {
             .alignItems(HorizontalAlign.Center)
           } else {
             Column() {
-              // ============ 1. 英雄区 ============
-              HeroCard({ variant: 'brand' }) {
-                // 关闭按钮：ic_arrow 默认朝右，转 180° 即「返回 / 关闭」
-                Row() {
-                  Column() {
-                    Image($r('app.media.ic_arrow'))
-                      .width(18)
-                      .height(18)
-                      .fillColor(Ink.ON_BRAND)
-                      .objectFit(ImageFit.Contain)
-                      .rotate({ angle: 180 })
+              // ============ 1. 抬头 ============
+              HeroCard({ variant: 'brand', period: `${this.reportYear}`, stamp: '年报' }) {
+                Column() {
+                  Row() {
+                    Text('← 返 回')
+                      .fontSize(10)
+                      .letterSpacing(1)
+                      .fontColor(Ink.ON_BRAND_3)
+                      .padding({ top: 6, bottom: 6 })
+                      .onClick(() => {
+                        this.onClose();
+                      })
+                    Blank()
+                    Text(`活 跃 ${this.activeDays} 天`)
+                      .fontSize(9)
+                      .fontColor(Ink.ON_BRAND_3)
+                      .letterSpacing(1)
+                      .fontFeature('"tnum" 1')
                   }
-                  .width(36)
-                  .height(36)
-                  .borderRadius(Radius.FULL)
-                  .backgroundColor(DECO_PILL)
-                  .justifyContent(FlexAlign.Center)
-                  .alignItems(HorizontalAlign.Center)
-                  .onClick(() => {
-                    this.onClose();
-                  })
-                }
-                .width('100%')
-                .alignItems(VerticalAlign.Center)
+                  .width('100%')
+                  .alignItems(VerticalAlign.Center)
+                  .margin({ bottom: 20 })
 
-                Row() {
-                  Column() {
-                    Text('我的年度碳迹')
-                      .fontSize(FontSize.BODY_S)
-                      .fontColor(Ink.ON_BRAND_2)
+                  Text('我 的 年 度 碳 迹')
+                    .fontSize(10)
+                    .fontColor(Ink.ON_BRAND_3)
+                    .letterSpacing(3)
+                    .width('100%')
 
-                    Row() {
-                      Text(`${this.reportYear}`)
-                        .fontSize(FontSize.DISPLAY_M)
-                        .fontWeight(Weight.DISPLAY)
-                        .fontColor(Ink.ON_BRAND)
-                      Text('年度')
-                        .fontSize(FontSize.SUB_M)
-                        .fontColor(Ink.ON_BRAND_2)
-                        .margin({ left: 5, bottom: 8 })
-                    }
-                    .alignItems(VerticalAlign.Bottom)
-                    .margin({ top: 2 })
-
-                    Text(this.nickname)
-                      .fontSize(FontSize.TITLE_S)
-                      .fontWeight(Weight.TITLE)
+                  Row() {
+                    Text(`${this.reportYear}`)
+                      .fontFamily(Serif.FAMILY)
+                      .fontSize(46)
                       .fontColor(Ink.ON_BRAND)
-                      .margin({ top: Space.SM })
-
-                    Text(this.heroLine())
-                      .fontSize(FontSize.BODY_S)
-                      .fontColor(Ink.ON_BRAND_2)
-                      .lineHeight(LineHeight.BODY_S)
-                      .margin({ top: 4 })
+                      .fontFeature('"tnum" 1')
+                    Text('年 度')
+                      .fontSize(11)
+                      .fontColor(Ink.ON_BRAND_3)
+                      .letterSpacing(2)
+                      .margin({ left: 8, bottom: 10 })
                   }
-                  .layoutWeight(1)
-                  .alignItems(HorizontalAlign.Start)
+                  .alignItems(VerticalAlign.Bottom)
+                  .width('100%')
+                  .margin({ top: 4 })
 
-                  // 大号半透明树叶：纯装饰，不承载信息
-                  Image($r('app.media.ic_leaf'))
-                    .width(72)
-                    .height(72)
-                    .fillColor(DECO_ART)
-                    .objectFit(ImageFit.Contain)
-                    .margin({ left: Space.SM })
+                  Text(this.nickname)
+                    .fontSize(18)
+                    .fontColor(Ink.ON_BRAND)
+                    .letterSpacing(1)
+                    .width('100%')
+                    .margin({ top: 10 })
+
+                  Text(this.heroLine())
+                    .fontSize(11)
+                    .fontColor(Ink.ON_BRAND_3)
+                    .lineHeight(18)
+                    .width('100%')
+                    .margin({ top: 6 })
+
+                  Column()
+                    .width('100%')
+                    .height(1)
+                    .backgroundColor('#33F7F2E6')
+                    .margin({ top: 16 })
+
+                  Row() {
+                    Text(`${this.recordCount} 条记录`)
+                      .fontSize(10)
+                      .fontColor(Ink.ON_BRAND_3)
+                      .fontFeature('"tnum" 1')
+                    Blank()
+                    Text('碳 迹 · 年 报')
+                      .fontSize(9)
+                      .fontColor(Ink.ON_BRAND_3)
+                      .letterSpacing(1)
+                  }
+                  .width('100%')
+                  .margin({ top: 10 })
                 }
                 .width('100%')
-                .alignItems(VerticalAlign.Center)
-                .margin({ top: Space.LG })
-
-                // 英雄区底部两枚小胶囊：把「活跃天数 / 记录条数」提前透出来
-                Row() {
-                  Text(`活跃 ${this.activeDays} 天`)
-                    .fontSize(FontSize.BODY_S)
-                    .fontColor(Ink.ON_BRAND)
-                    .backgroundColor(DECO_PILL)
-                    .borderRadius(Radius.FULL)
-                    .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                  Text(`${this.recordCount} 条记录`)
-                    .fontSize(FontSize.BODY_S)
-                    .fontColor(Ink.ON_BRAND)
-                    .backgroundColor(DECO_PILL)
-                    .borderRadius(Radius.FULL)
-                    .padding({ left: 11, right: 11, top: 5, bottom: 5 })
-                    .margin({ left: Space.SM })
-                }
-                .width('100%')
-                .margin({ top: Space.XL })
+                .alignItems(HorizontalAlign.Start)
               }
 
               // ============ 2. 空态提示（有数据时不出现） ============
               if (this.recordCount === 0) {
-                Column() {
-                  EmptyHint({
-                    title: '这一年还没有碳迹',
-                    desc: '去「记一笔」记下第一条低碳行为，这里的大数字就会长出来。',
-                    icon: $r('app.media.ic_leaf')
-                  })
-                }
-                .width('100%')
-                .margin({ bottom: Space.MD })
+                EmptyHint({
+                  title: '这一年还没有碳迹',
+                  desc: '去「记一笔」记下第一条低碳行为，这里的大数字就会长出来。',
+                  icon: $r('app.media.ic_leaf')
+                })
               }
 
-              // ============ 3. 七张数字卡 ============
+              // ============ 3. 数字账目 ============
               ForEach(this.cards, (c: StatCard) => {
                 Column() {
+                  Text(c.label)
+                    .fontSize(10)
+                    .letterSpacing(1)
+                    .fontColor(Ink.L3)
+                    .width('100%')
+
                   Row() {
-                    // 40×40 圆角图标块：整页统一的「先有图形，再读文字」
-                    Column() {
-                      Image(c.icon)
-                        .width(20)
-                        .height(20)
-                        .fillColor(c.iconInk)
-                        .objectFit(ImageFit.Contain)
-                    }
-                    .width(40)
-                    .height(40)
-                    .borderRadius(Radius.SM)
-                    .backgroundColor(c.iconSoft)
-                    .justifyContent(FlexAlign.Center)
-                    .alignItems(HorizontalAlign.Center)
-
-                    Column() {
-                      Text(c.label)
-                        .fontSize(FontSize.BODY_S)
-                        .fontColor(Ink.L2)
-                        .width('100%')
-
-                      // 大数字 + 单位：数字用 Normal 字重（Display 级用 Bold 会显笨重），
-                      // 单位小两档、Ink.L3、**底部对齐**
-                      Row() {
-                        Text(c.value)
-                          .fontSize(c.strong ? FontSize.DISPLAY_S : FontSize.TITLE_L)
-                          .fontWeight(Weight.DISPLAY)
-                          .fontColor(c.numInk)
-                        if (c.unit.length > 0) {
-                          Text(c.unit)
-                            .fontSize(FontSize.SUB_S)
-                            .fontColor(Ink.L3)
-                            .margin({ left: 5, bottom: c.strong ? 7 : 5 })
-                        }
-                      }
-                      .alignItems(VerticalAlign.Bottom)
-                      .margin({ top: 2 })
-
-                      Text(c.note)
-                        .fontSize(FontSize.BODY_S)
+                    Text(c.value)
+                      .fontFamily(Serif.FAMILY)
+                      .fontSize(c.strong ? 40 : 32)
+                      .fontColor(Ink.L1)
+                      .fontFeature('"tnum" 1')
+                    if (c.unit.length > 0) {
+                      Text(c.unit)
+                        .fontSize(10)
                         .fontColor(Ink.L3)
-                        .lineHeight(LineHeight.BODY_S)
-                        .width('100%')
-                        .margin({ top: 4 })
+                        .margin({ left: 5, bottom: 6 })
                     }
-                    .layoutWeight(1)
-                    .alignItems(HorizontalAlign.Start)
-                    .margin({ left: Space.MD })
                   }
+                  .alignItems(VerticalAlign.Bottom)
                   .width('100%')
-                  .alignItems(VerticalAlign.Top)
+                  .margin({ top: 2 })
+
+                  Text(c.note)
+                    .fontSize(11)
+                    .fontColor(Ink.L3)
+                    .lineHeight(17)
+                    .width('100%')
+                    .margin({ top: 5 })
                 }
                 .width('100%')
-                .padding(Space.LG)
-                // 统一白卡：层级不靠底色，靠「数字大小 + 数字颜色 + 图标色」区分。
-                // （不用 Brand.MIST 铺底：它 #F2F9F5 与页面底 Bg.PAGE #F1F3F5 几乎同色，
-                //   卡片会「陷进」背景里，反而看不出层级）
-                .backgroundColor(Bg.CARD)
-                .borderRadius(Radius.MD)
-                .shadow(shadowCard())
-                .margin({ bottom: Space.MD })
+                .alignItems(HorizontalAlign.Start)
+                .padding({ top: 16, bottom: 16 })
+                .border({ width: { bottom: 1 }, color: Rule.HAIR })
               }, (c: StatCard) => c.key)
 
               // ============ 4. 减排构成（四行分类条形） ============
@@ -749,16 +709,17 @@ export struct YearReportPage {
                   .strokeWidth(1)
                   .margin({ top: Space.MD, bottom: Space.MD })
 
-                Button('完成')
+                Button('完成', { type: ButtonType.Normal })
                   .width('100%')
                   .height(48)
                   .fontSize(FontSize.BODY_L)
                   .fontWeight(Weight.SUBTITLE)
                   .fontColor(Ink.ON_BRAND)
+            .borderRadius(Radius.XS)
                   // 官方约束：Button 设渐变前必须把 backgroundColor 置为透明，否则实色底会盖住渐变
                   .backgroundColor(Color.Transparent)
                   .linearGradient(buttonGradient())
-                  .borderRadius(Radius.FULL)
+                  .borderRadius(Radius.XS)
                   .onClick(() => {
                     this.onClose();
                   })
@@ -784,6 +745,7 @@ export struct YearReportPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Bg.PAGE)
+    // 不透明纸纹同时承担底色（backgroundColor 会盖住 backgroundImage）
+    .backgroundImage($r('app.media.paper_page'), ImageRepeat.XY)
   }
 }
