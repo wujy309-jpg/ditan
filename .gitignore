@@ -38,3 +38,10 @@ tools/rar/
 *.swp
 .idea/
 .vscode/
+
+# ---- 视觉回归的临时截图（tools/preview.sh 每轮覆盖、tools/look.sh 的调试图）----
+# 留档用的图在 素材/截图/v3/，那个目录要提交。
+# before-* / after-* 是「改造前后对比图」的输入，要保留跟踪。
+素材/截图/预览/*
+!素材/截图/预览/before-*.jpeg
+!素材/截图/预览/after-*.jpeg

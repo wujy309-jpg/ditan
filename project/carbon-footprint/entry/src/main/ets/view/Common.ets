@@ -21,6 +21,8 @@ import {
   Bg, Brand, CatColor, Edge, FontSize, Ink, LineHeight, Radius, Rule, Seal as SealColor, Semantic,
   Serif, Space, Weight, shadowCard
 } from '../common/Theme';
+import { hashText } from '../common/RoughMath';
+import { roughRect } from './Rough';
 import { Category } from '../model/Models';
 
 // ---------------------------------------------------------------------------
@@ -63,10 +65,21 @@ export function tnum(t: TextAttribute): TextAttribute {
 // ---------------------------------------------------------------------------
 
 /**
- * 一枚长方形朱印，两字竖排，轻微倾斜。
+ * 一枚长方形朱印，两字竖排，轻微倾斜，**边框是手绘的**。
  *
- * 为什么要「轻微倾斜」：真正盖出来的章不可能摆正。这个 -5° 是整套界面里
- * 唯一一处「不整齐」，也是让人相信「这是被设计过的」而不是「这是生成的」的细节。
+ * ── 为什么边框要抖 ────────────────────────────────────────────────────────
+ * v3 之前这里是一条 1.2vp 的完美矩形。完美矩形是 Illustrator 的产物，不是印章的。
+ * 真章压在纸上：油墨沿纸纤维洇开、按压力道不匀、边栏走两遍笔不会重合。
+ * 所以边框改成 Canvas 画的手绘贝塞尔（见 view/Rough.ets）：
+ * 一遍定形（满墨）+ 一遍余墨（半墨），边缘就有了深浅不匀。
+ *
+ * ── 为什么「轻微倾斜」还留着 ──────────────────────────────────────────────
+ * 真正盖出来的章不可能摆正。这个 -5° 是整套界面里唯一一处「不整齐」。
+ * 注意：抖动和倾斜是两件事 —— 倾斜是**摆放**不整齐，抖动是**印**不整齐。
+ *
+ * ── 为什么 seed 来自文字而不是 Math.random ─────────────────────────────────
+ * 同一枚章在每次重绘、每次进页面、每次截屏时必须长得一模一样，
+ * 否则分享图和屏幕上看到的不一致，回归截图也没有可比性。见 RoughMath.ets。
  */
 @Component
 export struct Seal {
@@ -78,9 +91,83 @@ export struct Seal {
   @Prop days: number = 0;
   @Prop sealSize: number = 13;
   @Prop angle: number = -5;
+  /**
+   * 手抖强度倍数（1 = 标准）。线宽与抖幅都随 sealSize 等比放大 ——
+   * 大印配小刀会显得像打印的，等比放大才像「换了把更大的刀」。
+   * 超过 1.6 小章就成毛边了，宁小勿大。
+   */
+  @Prop rough: number = 1.0;
+
+  private settings: RenderingContextSettings = new RenderingContextSettings(true);
+  private ink: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
+
+  private boxW(): number {
+    return this.sealSize * (this.days > 0 ? 3.0 : 2.1);
+  }
+
+  private boxH(): number {
+    return this.sealSize * (this.days > 0 ? 3.1 : 2.9);
+  }
+
+  /** 外框线宽（等比）：sealSize 11 时约 1.2vp */
+  private outLine(): number {
+    return this.sealSize * 0.109;
+  }
+
+  /** 内框（边栏）线宽（等比）：sealSize 11 时约 0.6vp */
+  private inLine(): number {
+    return this.sealSize * 0.055;
+  }
+
+  /** 第一遍的端点峰值偏移（等比）：sealSize 11 时约 1.0vp */
+  private jitter(): number {
+    return this.sealSize * 0.058 * this.rough;
+  }
+
+  /** 内框内缩量：宋印的「边栏」—— 外框粗、内框细，两圈才像刻出来的 */
+  private inset(): number {
+    return this.sealSize * 0.24;
+  }
+
+  /** 画布四周比墨框多出的余量。不留够，抖动会在画布边缘被切平 */
+  private pad(): number {
+    return this.jitter() + this.outLine();
+  }
+
+  private paint(): void {
+    const w: number = this.boxW();
+    const h: number = this.boxH();
+    const p: number = this.pad();
+    const ctx: CanvasRenderingContext2D = this.ink;
+    ctx.clearRect(0, 0, w + p * 2, h + p * 2);
+
+    // seed 只由文字决定：换个字就是另一枚章，同一枚章永远同一个形
+    const seed: number = hashText(this.text) + (this.days > 0 ? 977 : 0);
+
+    roughRect(ctx, p, p, w, h, seed, this.jitter(), this.outLine(), SealColor.RED);
+
+    // 内框抖幅减半 —— 细线抖到跟粗线一样，两圈会糊成一团
+    const i: number = this.inset();
+    roughRect(ctx, p + i, p + i, w - i * 2, h - i * 2,
+              seed + 4231, this.jitter() * 0.55, this.inLine(), SealColor.RED);
+  }
 
   build() {
-    Column() {
+    Stack() {
+      // 底层：抖动的边框。尺寸比墨框大一圈，所以画布会溢出 Stack 一点 ——
+      // 这正是想要的：印油本来就会洇到框外。Stack 不裁剪，布局占位不变。
+      Canvas(this.ink)
+        .width(this.boxW() + this.pad() * 2)
+        .height(this.boxH() + this.pad() * 2)
+        .onReady(() => {
+          this.paint();
+        })
+        // 尺寸变化（连续天数 0 ↔ N 会换墨框）后 onReady 不保证再触发，重画一次兜底
+        .onAreaChange(() => {
+          this.paint();
+        })
+
+      // 上层：文字。不要给文字设 backgroundColor —— 会盖住下面的 Canvas
       if (this.days > 0) {
         // 2×2 方印：连 / 续 / N / 天
         Column() {
@@ -109,23 +196,23 @@ export struct Seal {
           }
           .margin({ top: 1 })
         }
-        .padding(1)
-        .border({ width: 0.6, color: SealColor.RED, radius: 0.5 })
       } else {
-        Text(this.text.substring(0, 1))
-          .fontFamily(Serif.FAMILY)
-          .fontSize(this.sealSize)
-          .fontColor(SealColor.RED)
-        Text(this.text.substring(1, 2))
-          .fontFamily(Serif.FAMILY)
-          .fontSize(this.sealSize)
-          .fontColor(SealColor.RED)
+        // 两字竖排。必须包一层 Column —— Stack 会把两个 Text 直接叠在同一个位置
+        Column() {
+          Text(this.text.substring(0, 1))
+            .fontFamily(Serif.FAMILY)
+            .fontSize(this.sealSize * 0.86)
+            .fontColor(SealColor.RED)
+          Text(this.text.substring(1, 2))
+            .fontFamily(Serif.FAMILY)
+            .fontSize(this.sealSize * 0.86)
+            .fontColor(SealColor.RED)
+        }
       }
     }
-    .width(this.sealSize * (this.days > 0 ? 3.0 : 2.1))
-    .height(this.sealSize * (this.days > 0 ? 3.1 : 2.9))
-    .justifyContent(FlexAlign.Center)
-    .border({ width: 1.2, color: SealColor.RED, radius: 1 })
+    .width(this.boxW())
+    .height(this.boxH())
+    .clip(false)
     .rotate({ angle: this.angle })
     .opacity(0.92)
   }
@@ -141,7 +228,7 @@ export struct Seal {
  * 这是最稳的一张牌：一个 Text + layoutWeight(1) + Clip，任何分辨率的真机都一样。
  */
 @Component
-struct DottedRule {
+export struct DottedRule {
   @Prop dotColor: string = Rule.DASH;
 
   build() {

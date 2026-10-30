@@ -24,18 +24,19 @@ if [ ! -f "$TSC_JS" ]; then
 fi
 
 rm -rf "$WORK"
-mkdir -p "$WORK/model" "$WORK/data"
+mkdir -p "$WORK/model" "$WORK/data" "$WORK/common"
 
 # 原样复制纯逻辑模块（.ets → .ts），保持 import 相对路径不变
 cp "$SRC/model/Models.ets"            "$WORK/model/Models.ts"
 cp "$SRC/data/FactorLibrary.ets"      "$WORK/data/FactorLibrary.ts"
 cp "$SRC/data/TaskEngine.ets"         "$WORK/data/TaskEngine.ts"
+cp "$SRC/common/RoughMath.ets"        "$WORK/common/RoughMath.ts"
 cp "$WS_ROOT/tests/logic.test.ts"     "$WORK/logic.test.ts"
 
 cd "$WORK"
 # 宽松编译：只要类型层面能过就够，重点是跑逻辑
 "$NODE" "$TSC_JS" --target ES2021 --module commonjs --moduleResolution node \
        --strict false --skipLibCheck --outDir out \
-       model/Models.ts data/FactorLibrary.ts data/TaskEngine.ts logic.test.ts
+       model/Models.ts data/FactorLibrary.ts data/TaskEngine.ts common/RoughMath.ts logic.test.ts
 
 "$NODE" out/logic.test.js

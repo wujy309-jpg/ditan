@@ -243,16 +243,12 @@ export struct TrendLineChart {
     set.setDrawValues(false);
     set.setHighLightColor(GREEN);
 
-    // 渐变面积填充：从 30% 绿渐隐到全透明。
-    // 官方数据可视化规范鼓励「用渐变增强数据的可读性与色彩的细腻程度」，
-    // 同时纯折线在大屏上显得空，填充后整体更饱满。
-    set.setDrawFilled(true);
-    const fillStops: JArrayList<ChartColorStop> = new JArrayList<ChartColorStop>();
-    // 面积填充：主色 30% → 全透明。色值从 Brand.PRIMARY 推导，
-    // 避免在图表里再写一份绿色（改主色时这里会自动跟着变）。
-    fillStops.add([`#26${Brand.PRIMARY.substring(1)}`, 0.0]);
-    fillStops.add([`#00${Brand.PRIMARY.substring(1)}`, 1.0]);
-    set.setGradientFillColor(fillStops);
+    // 不填面积。
+    // v2 这里是「30% 绿 → 全透明」的渐变面积，理由是「纯折线在大屏上显得空」。
+    // 但在纸墨账本里，那片渐隐的绿正是最不像账的东西：账本记线，不记雾。
+    // 而且零数据时这条线压在 0 上，渐变会变成一大片淡绿，比空更难看。
+    // 折线 + 数据点足够表达趋势，分组与层级交给细线和留白（见 Theme 的三条硬规则）。
+    set.setDrawFilled(false);
 
     sets.add(set);
     const data: LineData = new LineData(sets);
@@ -334,10 +330,16 @@ export struct CategoryBarChart {
     set.setBarShadowColor(0x00000000);
     set.setHighLightColor(GREEN);
 
-    // 柱子用竖向渐变：顶部饱和、底部渐浅，比纯色更有体积感
+    // 柱子用纯色，不用竖向渐变。
+    // 渐变柱子会营造「体积感」，但账本里的柱是**量**，不是立体物；
+    // 一个颜色、一个高度，读起来才没有歧义。
+    //
+    // ⚠️ Fill 至少要两个色标：`new Fill([Brand.PRIMARY])` 只有一个元素时
+    // mpchart 不报错，直接把柱子画成**纯黑**（实测）。给两个相同色标
+    // 就是一条首尾同色的渐变 = 纯色，这是保持在同一套 API 里最稳的写法。
     const barFills: JArrayList<Fill> = new JArrayList<Fill>();
     for (let i = 0; i < this.payload.values.length; i++) {
-      barFills.add(new Fill([Brand.PRIMARY, Brand.LIGHT]));
+      barFills.add(new Fill([Brand.PRIMARY, Brand.PRIMARY]));
     }
     set.setGradientColors(barFills);
 

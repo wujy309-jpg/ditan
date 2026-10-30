@@ -10,12 +10,16 @@
  *   · 任务推荐引擎（短板优先、已完成标记、配额补齐）
  *   · 生活建议引擎（空数据、趋势对比、短板提醒）
  *   · 通用工具函数（round2 / formatDate / newId）
+ *   · 手绘印章的确定性（同一枚章每次画出来必须一模一样）
  *
  * 运行：tools/test-logic.sh
  */
 import { BehaviorRecord, Category, formatDate, newId, round2, today } from './model/Models';
 import { FACTORS, factorById, factorsOf } from './data/FactorLibrary';
 import { buildAdvice, buildDailyTasks, DailyTask, summaryLine } from './data/TaskEngine';
+import {
+  flatten, hashText, peakDeviation, RoughCurve, RoughPen, seeded
+} from './common/RoughMath';
 
 /** 测试跑在 Node 上，但没有装 @types/node，这里手动声明用到的成员 */
 declare const process: { exit(code: number): void };
@@ -212,6 +216,149 @@ console.log('\n【5】分享文案');
 eq('无数据时的分享文案', summaryLine([]), '开启我的低碳生活');
 ok('有数据时分享文案含减排量', summaryLine([rec(Category.TRAVEL, T, 12.34, Date.now())])
   .includes('12.34'));
+
+
+// ===========================================================================
+console.log('\n【6】手绘印章：确定性伪随机');
+
+// 同一 (seed, n) 必须永远同值 —— 这是「分享图和屏幕上一致」的前提
+let sameSeedOk: boolean = true;
+for (let s: number = 0; s < 40; s++) {
+  for (let n: number = 1; n <= 64; n++) {
+    if (seeded(s, n) !== seeded(s, n)) {
+      sameSeedOk = false;
+    }
+  }
+}
+ok('同一 (seed, n) 恒等', sameSeedOk);
+
+let inRange: boolean = true;
+for (let s: number = 0; s < 40; s++) {
+  for (let n: number = 1; n <= 200; n++) {
+    const v: number = seeded(s, n);
+    if (!(v >= 0 && v < 1)) {
+      inRange = false;
+    }
+  }
+}
+ok('取值落在 [0, 1)', inRange);
+ok('负数 seed 也可用（hashText 会返回负数）',
+  seeded(-704407405, 3) >= 0 && seeded(-704407405, 3) < 1);
+
+// 连续取数不能呈规律：相邻值若有强相关，画出来会有「节拍感」
+const seq: number[] = [];
+for (let n: number = 1; n <= 300; n++) {
+  seq.push(seeded(12345, n));
+}
+let mean: number = 0;
+for (let i: number = 0; i < seq.length; i++) {
+  mean += seq[i];
+}
+mean = mean / seq.length;
+let cov: number = 0;
+let varA: number = 0;
+let varB: number = 0;
+for (let i: number = 1; i < seq.length; i++) {
+  const a: number = seq[i - 1] - mean;
+  const b: number = seq[i] - mean;
+  cov += a * b;
+  varA += a * a;
+  varB += b * b;
+}
+const corr: number = cov / Math.sqrt(varA * varB);
+ok('相邻取数无强相关（|r| < 0.15）', Math.abs(corr) < 0.15, `r=${corr.toFixed(3)}`);
+
+// ===========================================================================
+console.log('\n【7】手绘印章：同一枚章必须同一个形');
+
+eq('hashText 对同一文字稳定', hashText('碳迹'), hashText('碳迹'));
+ok('不同文字的种子不同', hashText('碳迹') !== hashText('年报'));
+
+/** 复现 Common.ets 里 Seal.paint() 的参数：sealSize 11 的两字章 */
+const SEAL_SIZE: number = 11;
+const SEAL_OFFSET: number = SEAL_SIZE * 0.058;
+const SEAL_W: number = SEAL_SIZE * 2.1;
+const SEAL_H: number = SEAL_SIZE * 2.9;
+
+const shapeA: number[] = flatten(new RoughPen(hashText('碳迹')).rect(0, 0, SEAL_W, SEAL_H, SEAL_OFFSET, 0.55));
+const shapeB: number[] = flatten(new RoughPen(hashText('碳迹')).rect(0, 0, SEAL_W, SEAL_H, SEAL_OFFSET, 0.55));
+eq('同 seed 两次重建 → 完全相同的形（32 个数）', shapeA, shapeB);
+
+const shapeC: number[] = flatten(new RoughPen(hashText('年报')).rect(0, 0, SEAL_W, SEAL_H, SEAL_OFFSET, 0.55));
+ok('换文字 → 换一枚章', JSON.stringify(shapeA) !== JSON.stringify(shapeC));
+ok('形里没有 NaN（NaN 会让整条边消失）',
+  shapeA.every((v: number) => !Number.isNaN(v)));
+
+// 余墨（第二遍）必须贴着第一遍走，不能自己另起一个形
+const baseCurves: RoughCurve[] = new RoughPen(99).rect(0, 0, SEAL_W, SEAL_H, SEAL_OFFSET, 0.55);
+const ghostCurves: RoughCurve[] = new RoughPen(99 + 7919).ghost(baseCurves, SEAL_OFFSET * 0.55);
+let ghostMax: number = 0;
+for (let i: number = 0; i < baseCurves.length; i++) {
+  const b: RoughCurve = baseCurves[i];
+  const g: RoughCurve = ghostCurves[i];
+  const d: number = Math.max(
+    Math.abs(g.x1 - b.x1), Math.abs(g.y1 - b.y1),
+    Math.abs(g.cx1 - b.cx1), Math.abs(g.cy1 - b.cy1),
+    Math.abs(g.cx2 - b.cx2), Math.abs(g.cy2 - b.cy2),
+    Math.abs(g.x2 - b.x2), Math.abs(g.y2 - b.y2));
+  if (d > ghostMax) {
+    ghostMax = d;
+  }
+}
+ok('余墨偏离 ≤ offset×0.55（否则会变成第二根线）',
+  ghostMax <= SEAL_OFFSET * 0.55 + 1e-9, `实际 ${ghostMax.toFixed(3)}vp`);
+
+// ===========================================================================
+console.log('\n【8】手绘印章：抖得够，但不能抖脏');
+
+// 验收线：100% 放大看，边缘偏离直线 ≤ 1.5vp
+let worstPeak: number = 0;
+const sampleTexts: string[] = ['碳迹', '年报', '核减', '连续', '先锋', '达人', '低碳', '绿色'];
+for (let i: number = 0; i < sampleTexts.length; i++) {
+  const cs: RoughCurve[] = new RoughPen(hashText(sampleTexts[i]))
+    .rect(0, 0, SEAL_W, SEAL_H, SEAL_OFFSET, 0.55);
+  const peak: number = peakDeviation(cs, 0, 0, SEAL_W, SEAL_H);
+  if (peak > worstPeak) {
+    worstPeak = peak;
+  }
+}
+ok('边缘偏离直线 ≤ 1.5vp', worstPeak <= 1.5, `实测最大 ${worstPeak.toFixed(3)}vp`);
+ok('确实抖了（否则等于没做）', worstPeak >= 0.35, `实测最大 ${worstPeak.toFixed(3)}vp`);
+
+// 每条边不许「画歪」：端点的法向差（倾斜量）必须远小于平移量
+let worstTilt: number = 0;
+for (let i: number = 0; i < sampleTexts.length; i++) {
+  const cs: RoughCurve[] = new RoughPen(hashText(sampleTexts[i]))
+    .rect(0, 0, SEAL_W, SEAL_H, SEAL_OFFSET, 0.55);
+  for (let k: number = 0; k < cs.length; k++) {
+    const c: RoughCurve = cs[k];
+    // 竖直边看 x 差，水平边看 y 差
+    const vertical: boolean = Math.abs(c.x2 - c.x1) < Math.abs(c.y2 - c.y1);
+    const lean: number = vertical ? Math.abs(c.x2 - c.x1) : Math.abs(c.y2 - c.y1);
+    if (lean > worstTilt) {
+      worstTilt = lean;
+    }
+  }
+}
+ok('单边倾斜 ≤ offset×0.8（>1 就成「画歪的方框」）',
+  worstTilt <= SEAL_OFFSET * 0.8, `实测 ${worstTilt.toFixed(3)}vp / offset ${SEAL_OFFSET.toFixed(3)}vp`);
+
+// 拐角必须错开：四条边的端点不能严丝合缝，否则就是打印机画的
+let gapMin: number = 99;
+let gapMax: number = 0;
+for (let i: number = 0; i < sampleTexts.length; i++) {
+  const cs: RoughCurve[] = new RoughPen(hashText(sampleTexts[i]))
+    .rect(0, 0, SEAL_W, SEAL_H, SEAL_OFFSET, 0.55);
+  // 上边的起点 与 左边的终点 是同一个理想角点
+  const dx: number = cs[0].x1 - cs[3].x2;
+  const dy: number = cs[0].y1 - cs[3].y2;
+  const gap: number = Math.sqrt(dx * dx + dy * dy);
+  gapMin = Math.min(gapMin, gap);
+  gapMax = Math.max(gapMax, gap);
+}
+ok('拐角两条边错开（手刻感来自这里）', gapMin > 0.08, `最小 ${gapMin.toFixed(3)}vp`);
+ok('拐角错开但不过火（不许裂成断口）', gapMax < SEAL_OFFSET * 3,
+  `最大 ${gapMax.toFixed(3)}vp / offset ${SEAL_OFFSET.toFixed(3)}vp`);
 
 // ===========================================================================
 console.log(`\n${'='.repeat(52)}`);

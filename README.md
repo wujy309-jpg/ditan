@@ -63,10 +63,11 @@
 │
 ├── tools/                           # 工程脚本
 │   ├── preview.sh                   #   ★ 视觉回归：构建→签名→安装→逐页截图
+│   ├── look.sh                      #   调细节用：装完只截当前屏并裁印章放大 4×
 │   ├── build.sh / deploy.sh         #   构建 / 同步到 DevEco 工程目录
 │   ├── sign.sh                      #   本地签名（无需登录华为账号）
 │   ├── emulator.sh                  #   模拟器管理（纯命令行）
-│   ├── test-logic.sh                #   40 项纯逻辑断言
+│   ├── test-logic.sh                #   55 项纯逻辑断言
 │   ├── capture-screens.py           #   重拍演示截图（带自检）
 │   ├── seed-demo-data.py            #   填充演示数据（走应用自己的表单）
 │   ├── icon/                        #   图标集（脚本生成 SVG）
@@ -123,7 +124,7 @@ tools/preview.sh all                                # 构建 → 安装 → 五�
 ### 回归测试
 
 ```bash
-tools/test-logic.sh                 # 40 项纯逻辑断言（因子算术、任务推荐、生活建议、分享文案）
+tools/test-logic.sh                 # 55 项纯逻辑断言（因子算术、任务推荐、生活建议、分享文案、印章抖动确定性）
 python3 tools/icon/check_icons.py   # 24 个图标自检（裁切 / 结构 / 页签视觉重量一致性）
 ```
 
@@ -146,6 +147,7 @@ python3 tools/icon/check_icons.py   # 24 个图标自检（裁切 / 结构 / 页
 > 通用模具 —— 换成蓝色、换掉 logo 依然成立。**可替换的界面，在评委眼里就是可替换的作品。**
 
 设计令牌在 `common/Theme.ets`（v3），通用组件在 `view/Common.ets`（11 个，零第三方依赖）；
+印章的手绘抖动在 `common/RoughMath.ets`（纯几何）+ `view/Rough.ets`（Canvas 双遍墨）；
 字体子集与 OFL 声明在 `entry/src/main/resources/rawfile/fonts/`。
 
 > **接着做请先读 [`交接文档-v3账本-下一会话.md`](交接文档-v3账本-下一会话.md)**（环境、文件地图、ArkUI 陷阱、下一步任务与验收标准）。

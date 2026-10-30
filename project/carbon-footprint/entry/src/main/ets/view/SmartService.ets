@@ -19,9 +19,10 @@ import { CarbonRepository } from '../data/CarbonRepository';
 import { buildAdvice, buildDailyTasks, DailyTask } from '../data/TaskEngine';
 import { BehaviorRecord, categoryLabel, round2, today } from '../model/Models';
 import {
-  Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Seal, Semantic, Serif, Space, Weight,
+  Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   Motion, shadowCard, shadowRaised, shadowSubtle, heroGradient, softGradient
 } from '../common/Theme';
+import { DottedRule, Seal as SealStamp } from './Common';
 
 const DOMAIN: number = 0x0005;
 const TAG: string = 'SmartService';
@@ -45,11 +46,56 @@ export class SharePayload {
 }
 
 /**
- * 分享卡：这个组件会被 componentSnapshot 截图，所以要给一个稳定的 id。
+ * 一条账目：项目 ………… 数值。账本是靠这一行一行的对齐成立的。
  *
- * 注意：这里刻意用**基础类型**逐个接收数据，而不是传一个 SharePayload 对象。
- * 原因：实测发现 `@Prop` 接收自定义类对象时，父组件替换该对象后子组件没有刷新
- * （分享卡一直显示 0，而同一份数据在父组件里已是 2.35）。改成基础类型后行为确定。
+ * ⚠️ 这里必须是 @Component，不能是 `@Builder ledgerRow(label, value)`。
+ * @Builder 按值传参时，父组件的状态变了它**不会**重绘 —— 实测现象是：
+ * 累计减排（直接子节点，走 @Prop）刷新成了 14.62，而这三行的
+ * 「0 条 / 0 天 / —」停在首帧不动。EntryPage 与 ProfilePage 的实现备注里
+ * 已经记过同一个坑，这里是第三次踩，所以单独写成组件。
+ */
+@Component
+struct LedgerRow {
+  @Prop label: string = '';
+  @Prop value: string = '';
+
+  build() {
+    Row() {
+      Text(this.label)
+        .fontSize(12)
+        .fontColor(Ink.L2)
+      DottedRule({ dotColor: Rule.DASH })
+      Text(this.value)
+        .fontFamily(Serif.FAMILY)
+        .fontSize(13)
+        .fontColor(Ink.L1)
+        .fontFeature('"tnum" 1')
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({ top: 5, bottom: 5 })
+  }
+}
+
+/**
+ * 分享卡 —— 「减排凭证」，一张会被截屏传播的小票。
+ *
+ * ── 为什么是「小票」不是「海报」──────────────────────────────────────────
+ * 这张图会离开界面被单独传播（发群里、贴 PPT、印出来）。海报化的分享卡
+ * 一定滑向「大圆角色块 + 渐变 + 大图标」——那是所有模板的默认长相。
+ * 而「小票」本来就是这个产品的一部分：一行行账目、等宽数字、引导点线、
+ * 落款盖章。它不需要为「分享」而改变语言，反而因为被传播才更需要守住语言。
+ *
+ * ── 结构 ────────────────────────────────────────────────────────────────
+ *   抬头（刊名 + 「凭证」朱字）→ 账簿双线 → 累计减排大字
+ *   → 三条明细（项目 ………… 数值）→ 点线 → 落款（日期 / 昵称）+ 朱印
+ *   → 底注（本机数据）
+ *
+ * ── 两个技术注意 ─────────────────────────────────────────────────────────
+ *   1. 数据用**基础类型**逐个接收（不是传 SharePayload）：实测 @Prop 收自定义
+ *      类对象时父组件替换对象后子组件不刷新，分享卡会一直显示 0。
+ *   2. id 固定为 carbonShareCard —— componentSnapshot 靠它取节点。
+ *      印章是 Canvas 画的，截图能不能带出来必须实机验证（见交接文档）。
  */
 @Component
 export struct ShareCard {
@@ -66,101 +112,120 @@ export struct ShareCard {
 
   build() {
     Column() {
+      // ── 抬头 ────────────────────────────────────────────────────────
       Row() {
-        Text('碳迹')
-          .fontSize(18)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(Ink.ON_BRAND)
+        Text('碳 迹 · 减 排 凭 证')
+          .fontFamily(Serif.FAMILY)
+          .fontSize(11)
+          .letterSpacing(1.2)
+          .fontColor(Ink.L1)
         Blank()
-        Text(this.nickname)
-          .fontSize(12)
-          .fontColor(Ink.ON_BRAND_2)
+        Text('凭 证')
+          .fontFamily(Serif.FAMILY)
+          .fontSize(9)
+          .letterSpacing(1.5)
+          .fontColor(Seal.RED)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
 
-      Text('我的低碳成绩单')
-        .fontSize(12)
-        .fontColor(Ink.ON_BRAND_2)
+      // ── 账簿双线：粗在上、细在下 ────────────────────────────────────
+      Column()
         .width('100%')
-        .margin({ top: 2 })
+        .height(1.4)
+        .backgroundColor(Rule.STRONG)
+        .margin({ top: 9 })
+      Column()
+        .width('100%')
+        .height(0.7)
+        .backgroundColor(Rule.HAIR)
+        .margin({ top: 2.5 })
 
-      Text(`${this.totalSaved}`)
-        .fontSize(48)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(Ink.ON_BRAND)
+      // ── 主数字 ──────────────────────────────────────────────────────
+      Text('累 计 减 排')
+        .fontSize(9)
+        .letterSpacing(2)
+        .fontColor(Ink.L3)
         .width('100%')
         .margin({ top: 18 })
 
-      Text('kg CO₂e 累计减排')
-        .fontSize(13)
-        .fontColor(Ink.ON_BRAND_2)
+      Row() {
+        Text(`${this.totalSaved}`)
+          .fontFamily(Serif.FAMILY)
+          .fontSize(46)
+          .fontColor(Ink.L1)
+          .fontFeature('"tnum" 1')
+        Text('kg CO₂e')
+          .fontSize(11)
+          .fontColor(Ink.L3)
+          .margin({ left: 6, bottom: 9 })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Bottom)
+
+      Text(`折合 ${this.trees()} 棵树 · 年`)
+        .fontSize(11)
+        .fontColor(Ink.L2)
         .width('100%')
+        .margin({ top: 3 })
+
+      // ── 明细 ────────────────────────────────────────────────────────
+      Column()
+        .width('100%')
+        .height(0.7)
+        .backgroundColor(Rule.HAIR)
+        .margin({ top: 14, bottom: 4 })
+
+      LedgerRow({ label: '低碳记录', value: `${this.recordCount} 条` })
+      LedgerRow({ label: '坚持记录', value: `${this.activeDays} 天` })
+      LedgerRow({ label: '主力贡献', value: this.topCategory })
+
+      // ── 落款：日期 + 昵称 在左，朱印在右（压住上面的点线 = 骑缝）──────
+      Column()
+        .width('100%')
+        .height(0.7)
+        .backgroundColor(Rule.HAIR)
+        .margin({ top: 4, bottom: 10 })
 
       Row() {
         Column() {
-          Text(`${this.trees()}`)
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(Ink.ON_BRAND)
-          Text('相当于种树（棵·年）')
+          Text(this.nickname.length > 0 ? this.nickname : '低碳生活家')
+            .fontFamily(Serif.FAMILY)
+            .fontSize(13)
+            .fontColor(Ink.L1)
+            .width('100%')
+          Text(this.dateStr)
             .fontSize(10)
-            .fontColor(Ink.ON_BRAND_2)
-            .margin({ top: 4 })
+            .fontColor(Ink.L3)
+            .fontFeature('"tnum" 1')
+            .width('100%')
+            .margin({ top: 3 })
         }
         .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
 
-        Column() {
-          Text(`${this.recordCount}`)
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(Ink.ON_BRAND)
-          Text('条低碳记录')
-            .fontSize(10)
-            .fontColor(Ink.ON_BRAND_2)
-            .margin({ top: 4 })
-        }
-        .layoutWeight(1)
-
-        Column() {
-          Text(`${this.activeDays}`)
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(Ink.ON_BRAND)
-          Text('天坚持记录')
-            .fontSize(10)
-            .fontColor(Ink.ON_BRAND_2)
-            .margin({ top: 4 })
-        }
-        .layoutWeight(1)
+        // 印章是从组件里长出来的，不是贴上去的：同一套 Seal，只是印面更大
+        SealStamp({ text: '碳迹', sealSize: 19, angle: -8, rough: 1.25 })
+          .translate({ y: -14 })
       }
       .width('100%')
-      .margin({ top: 22 })
+      .alignItems(VerticalAlign.Center)
 
-      Divider()
-        .color(Edge.ON_BRAND)
-        .margin({ top: 16, bottom: 12 })
-
-      Row() {
-        Text(`主力贡献：${this.topCategory}`)
-          .fontSize(11)
-          .fontColor(Ink.ON_BRAND_2)
-          .layoutWeight(1)
-        Text(this.dateStr)
-          .fontSize(11)
-          .fontColor(Ink.ON_BRAND_2)
-      }
-      .width('100%')
-
-      Text('数据全部保存在本机，不上传云端')
-        .fontSize(9)
-        .fontColor(Ink.ON_BRAND_3)
+      // ── 底注 ────────────────────────────────────────────────────────
+      Text('本 机 生 成 · 数 据 不 出 设 备')
+        .fontSize(8)
+        .letterSpacing(1.5)
+        .fontColor(Ink.L4)
         .width('100%')
-        .margin({ top: 8 })
+        .margin({ top: 2 })
     }
     .width('100%')
-    .padding(22)
-    .backgroundColor(Brand.PRIMARY)
-    .borderRadius(Radius.MD)
+    .padding({ left: 20, right: 20, top: 18, bottom: 16 })
+    // 比纸再亮半档：这是「贴上去的一张纸」，不是又一张卡片
+    .backgroundColor(Bg.CARD)
+    .backgroundImage($r('app.media.paper_card'), ImageRepeat.XY)
+    .border({ width: 0.8, color: Rule.HAIR })
+    .borderRadius(Radius.XS)
     .id('carbonShareCard')
   }
 }
@@ -460,16 +525,25 @@ export struct SmartService {
 
       // ---------- 分享 ----------
       Column() {
-        Text('减排成果分享')
-          .fontSize(15)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(Ink.L1)
-          .width('100%')
-        Text(`累计 ${this.share.totalSaved} kg CO₂e · ${this.share.recordCount} 条记录`)
-          .fontSize(11)
-          .fontColor(Ink.L3)
-          .width('100%')
-          .margin({ top: 2, bottom: 10 })
+        Row() {
+          Text('减 排 凭 证')
+            .fontFamily(Serif.FAMILY)
+            .fontSize(14)
+            .fontColor(Ink.L1)
+            .layoutWeight(1)
+          Text('可 分 享')
+            .fontSize(9)
+            .letterSpacing(1)
+            .fontColor(Seal.RED)
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .border({ width: 0.8, color: Seal.RED, radius: 1 })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 10 })
+
+        // 不再在票面上方复述「累计 X kg · N 条」—— 票面里已经有了。
+        // 同一个数字在一屏里说两遍，是「模板感」最常见的来源之一。
         if (this.dbg.length > 0) {
           Text(this.dbg)
             .fontSize(11)
@@ -494,7 +568,8 @@ export struct SmartService {
             .layoutWeight(1)
             .height(38)
             .fontSize(13)
-            .backgroundColor(Brand.PRIMARY)
+            .backgroundColor(Ink.L1)
+            .fontColor(Ink.ON_BRAND)
             .enabled(!this.generating)
             .borderRadius(Radius.XS)
             .onClick(() => {
@@ -514,14 +589,14 @@ export struct SmartService {
             SaveButton({
               icon: SaveIconStyle.FULL_FILLED,
               text: SaveDescription.SAVE_IMAGE,
-              buttonType: ButtonType.Capsule
+              buttonType: ButtonType.Normal
             })
               .width(148)
               .height(38)
               .fontSize(13)
-              .backgroundColor(Brand.SOFT)
-              .fontColor(Brand.PRIMARY)
-              .iconColor(Brand.PRIMARY)
+              .backgroundColor(Bg.SUBTLE)
+              .fontColor(Ink.L1)
+              .iconColor(Ink.L1)
               .onClick((event: ClickEvent, result: SaveButtonOnClickResult) => {
                 if (result === SaveButtonOnClickResult.SUCCESS) {
                   this.saveToAlbum();
