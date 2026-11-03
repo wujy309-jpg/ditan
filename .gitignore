@@ -27,6 +27,12 @@ signing/
 .research/ui/
 .research/*.sh
 
+# ---- Python 缓存与虚拟环境（脚本可重跑，字节码不入库）----
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
 # ---- 第三方工具二进制（rar/unrar，1.4 MB，用时自行下载）----
 tools/rar/
 
