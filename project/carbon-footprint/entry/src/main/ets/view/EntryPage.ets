@@ -78,6 +78,9 @@ export struct EntryPage {
   @State hint: string = '';
   @State hintOk: boolean = true;
   @State recent: BehaviorRecord[] = [];
+  /** 记录总条数。不能拿 recent.length 充数 —— recent 被 slice(0,5) 截断过，
+   *  一旦记录超过 5 条，刊头就会永远显示「共 5 条」，与看板页的条数打架。 */
+  @State count: number = 0;
   @State total: number = 0;
   @State todayTotal: number = 0;
   @State weekTotal: number = 0;
@@ -176,7 +179,26 @@ export struct EntryPage {
     if (!(amt > 0)) {
       return '—';
     }
-    return `${round2(amt * this.factor().savedPerUnit)} kg CO₂e`;
+    return `${round2(amt * this.factor().savedPerUnit)}`;
+  }
+
+  /** 预览是否有有效数值（决定「本次减排」右侧的单位块要不要画） */
+  private hasPreview(): boolean {
+    return this.preview() !== '—';
+  }
+
+  /**
+   * 今日目标的一句话提示。
+   * 与看板页 todayLine() 同款 —— 两页刊头必须等高，否则切页签时顶部会跳一下。
+   */
+  private todayLine(): string {
+    if (this.todayTotal >= DAILY_GOAL) {
+      return '今日额度记满，明天继续。';
+    }
+    if (this.todayTotal <= 0) {
+      return '今天还没开张 —— 记一笔，账上就有了。';
+    }
+    return `还差 ${(DAILY_GOAL - this.todayTotal).toFixed(2)} kg，再记一笔就够。`;
   }
 
   private async refresh(): Promise<void> {
@@ -186,6 +208,7 @@ export struct EntryPage {
     }
     const list: BehaviorRecord[] = await repo.listBehaviors();
     this.recent = list.slice(0, 5);
+    this.count = list.length;
     this.total = await repo.totalSaved();
 
     // 今日与本周：英雄区的环形进度与副数据要用
@@ -413,7 +436,7 @@ export struct EntryPage {
                   .fontFeature('"tnum" 1')
                   .margin({ left: 8 })
                 Blank()
-                Text(`共 ${this.recent.length} 条`)
+                Text(`共 ${this.count} 条`)
                   .fontSize(10)
                   .fontColor(Ink.ON_BRAND_3)
                   .fontFeature('"tnum" 1')
@@ -421,6 +444,14 @@ export struct EntryPage {
               .width('100%')
               .alignItems(VerticalAlign.Center)
               .margin({ top: 8 })
+
+              // 与看板页同款的一句提示：两页刊头等高，切页签时顶部不跳
+              Text(this.todayLine())
+                .fontSize(11)
+                .fontColor(Ink.ON_BRAND_2)
+                .lineHeight(18)
+                .width('100%')
+                .margin({ top: 10 })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)
@@ -668,10 +699,21 @@ export struct EntryPage {
                 .fontSize(24)
                 .fontColor(Ink.L1)
                 .fontFeature('"tnum" 1')
-              Text('kg')
-                .fontSize(10)
-                .fontColor(Ink.L3)
-                .margin({ left: 3, bottom: 3 })
+              // 单位只画一次。原来 preview() 自己就带「kg CO₂e」，这里又补了一个
+              // 小号「kg」，渲染出来是「1.17 kg CO₂e kg」—— 截图里能直接看到。
+              if (this.hasPreview()) {
+                Column() {
+                  Text('kg')
+                    .fontSize(9)
+                    .fontColor(Ink.L3)
+                  Text('CO₂e')
+                    .fontSize(8)
+                    .fontColor(Ink.L4)
+                    .margin({ top: 1 })
+                }
+                .alignItems(HorizontalAlign.Start)
+                .margin({ left: 4, bottom: 4 })
+              }
             }
             .width('100%')
             .alignItems(VerticalAlign.Bottom)

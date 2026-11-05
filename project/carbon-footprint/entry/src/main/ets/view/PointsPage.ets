@@ -21,7 +21,7 @@
  */
 import { CarbonRepository, POINTS_PER_KG } from '../data/CarbonRepository';
 import { ApiCode, ApiResult, Benefit, ExchangeOrder, PlatformAccount } from '../data/CarbonInclusiveApi';
-import { PointsEntry } from '../model/Models';
+import { PointsEntry, today } from '../model/Models';
 import { CardTitle, HeroCard, RingStat, SectionCard } from './Common';
 import {
   Bg, Brand, Edge, FontSize, Ink, LineHeight, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
@@ -130,13 +130,28 @@ export struct PointsPage {
     if (repo === undefined) {
       return;
     }
+    // 连点保护：busy 是同步置位的，第二次点击进不来。
+    // 原先这里没有任何保护，快速双击会用同一份旧余额扣两次。
+    if (this.busy) {
+      return;
+    }
     if (this.balance < r.cost) {
       this.say(false, `积分不足，还差 ${r.cost - this.balance} 分`);
       return;
     }
-    await repo.addPoints(-r.cost, `兑换「${r.name}」`);
-    this.say(true, `兑换成功：${r.name}`);
-    await this.refresh();
+    this.busy = true;
+    try {
+      const entry: PointsEntry = await repo.addPoints(-r.cost, `兑换「${r.name}」`);
+      // delta 为 0 = 仓储层判定余额不足（并发下才可能发生），如实告诉用户没扣分
+      if (entry.delta === 0) {
+        this.say(false, '积分不足，兑换未完成');
+      } else {
+        this.say(true, `兑换成功：${r.name}`);
+      }
+    } finally {
+      this.busy = false;
+      await this.refresh();
+    }
   }
 
   // ---------------- 碳普惠平台 ----------------
@@ -167,7 +182,10 @@ export struct PointsPage {
     }
     this.busy = true;
     try {
-      const res: ApiResult = await repo.platform().reportPoints(this.unreported);
+      // 幂等键从「本批待上报额度」派生：同一批积分无论点几次，号都一样，平台侧只记一次。
+      // 用随机号反而不能去重——每次点击都是新号。
+      const requestId: string = `rpt-${this.balance}-${this.unreported}`;
+      const res: ApiResult = await repo.platform().reportPoints(this.unreported, requestId);
       this.say(res.code === ApiCode.OK, res.message);
     } finally {
       this.busy = false;
@@ -327,7 +345,7 @@ export struct PointsPage {
           // ============ 主卡（第一级）：当前积分 + 目标环 ============
           // 用 HeroCard 统一「页面第一屏」的语言；右侧从装饰性勋章图标换成
           // 目标环 —— 装饰只能好看，目标环能回答「我还差多少」。
-          HeroCard({ variant: 'brand', period: `兑换 ${this.orders.length} 次`, stamp: '碳迹' }) {
+          HeroCard({ variant: 'brand', period: today(), stamp: '碳迹' }) {
             Column() {
               Text('当 前 碳 积 分')
                 .fontSize(10)
@@ -411,17 +429,25 @@ export struct PointsPage {
             .alignItems(HorizontalAlign.Start)
           }
 
+          // 反馈行：原来套了一张纸白卡片，一行字占一整块，看着像掉了张便签。
+          // 账本里「批注」是写在行间的，用一道朱砂细竖线 + 有色字即可。
           if (this.hint.length > 0) {
-            Text(this.hint)
-              .fontSize(FontSize.BODY_M)
-              .fontColor(this.hintOk ? Brand.PRIMARY : Semantic.WARNING)
-              .lineHeight(LineHeight.BODY_L)
-              .width('100%')
-              .padding(Space.MD)
-              .backgroundColor(Bg.CARD)
-              .borderRadius(Radius.MD)
-              .shadow(shadowSubtle())
-              .margin({ bottom: Space.MD })
+            Row() {
+              Column()
+                .width(2)
+                .height(14)
+                .backgroundColor(this.hintOk ? Brand.PRIMARY : Semantic.WARNING)
+                .margin({ right: Space.SM })
+              Text(this.hint)
+                .fontSize(FontSize.BODY_S)
+                .fontColor(this.hintOk ? Brand.PRIMARY : Semantic.WARNING)
+                .lineHeight(LineHeight.BODY_S)
+                .layoutWeight(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Top)
+            .padding({ top: 2, bottom: 2 })
+            .margin({ bottom: Space.LG })
           }
 
           // ============ 创新点 3：城市碳普惠平台 ============

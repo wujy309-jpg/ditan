@@ -57,15 +57,25 @@ export interface ClassifyDetail {
 /** URI → PixelMap（两条通路的公共输入） */
 async function uriToPixelMap(uri: string): Promise<image.PixelMap | undefined> {
   let file: fileIo.File | undefined = undefined;
+  let source: image.ImageSource | undefined = undefined;
   try {
     file = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
-    const source: image.ImageSource = image.createImageSource(file.fd);
+    source = image.createImageSource(file.fd);
     const pixelMap: image.PixelMap = await source.createPixelMap();
     return pixelMap;
   } catch (e) {
     hilog.error(DOMAIN, TAG, 'uriToPixelMap failed: %{public}s', JSON.stringify(e));
     return undefined;
   } finally {
+    // ImageSource 是解码资源的持有者，不 release 的话每次选图/拍照都泄漏一份；
+    // 以前只关了文件，解码器与它内部缓存的那份原始位图一直留着。
+    if (source !== undefined) {
+      try {
+        await source.release();
+      } catch (e) {
+        hilog.warn(DOMAIN, TAG, 'release image source failed');
+      }
+    }
     if (file !== undefined) {
       try {
         await fileIo.close(file);

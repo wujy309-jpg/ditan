@@ -186,9 +186,16 @@ export function buildAdvice(records: BehaviorRecord[]): string[] {
   }
 
   // 3) 停留提醒
-  const lastDate: string = records[0].date;
+  // 取「最大日期」而不是 records[0]：原实现隐式要求调用方必须按时间倒序传数组，
+  // 换个调用点（比如按录入顺序遍历）就会拿着最老的一条算「滞留天数」，提示全是错的。
+  let lastDate: string = '';
+  for (let i = 0; i < records.length; i++) {
+    if (records[i].date > lastDate) {
+      lastDate = records[i].date;
+    }
+  }
   const todayStr: string = formatDate(new Date());
-  if (lastDate < todayStr) {
+  if (lastDate.length > 0 && lastDate < todayStr) {
     const d1: Date = new Date(`${lastDate}T00:00:00`);
     const d2: Date = new Date(`${todayStr}T00:00:00`);
     const gapDays: number = Math.round((d2.getTime() - d1.getTime()) / 86400000);

@@ -51,3 +51,11 @@ tools/rar/
 素材/截图/预览/*
 !素材/截图/预览/before-*.jpeg
 !素材/截图/预览/after-*.jpeg
+
+# 忽略编译缓存和预览文件
+**/.preview/
+**/intermediates/
+**/generated/
+**/build/
+**/node_modules/
+*.log

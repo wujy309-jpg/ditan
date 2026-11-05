@@ -44,6 +44,8 @@ const STDS: number[] = [0.229, 0.224, 0.225];
 const CHANNEL_MODE: string = 'RGB'; // 'RGB' | 'BGR'
 
 let cachedModel: mindSporeLite.Model | undefined = undefined;
+/** 正在进行的加载：并发调用共用同一个 Promise，避免同时加载两份 11.4 MB 模型 */
+let pendingModel: Promise<mindSporeLite.Model> | undefined = undefined;
 
 /** 一条候选：类别索引 + 分数 */
 export interface ClassScore {
@@ -51,13 +53,27 @@ export interface ClassScore {
   score: number;
 }
 
-/** 从 rawfile 加载模型（进程内只加载一次，常驻内存） */
+/** 取常驻模型：有缓存直接给；正在加载就等同一个 Promise；都没有才真正加载 */
 async function ensureModel(mgr: resourceManager.ResourceManager): Promise<mindSporeLite.Model> {
   const cached: mindSporeLite.Model | undefined = cachedModel;
   if (cached !== undefined) {
     return cached;
   }
+  const pending: Promise<mindSporeLite.Model> | undefined = pendingModel;
+  if (pending !== undefined) {
+    return pending;
+  }
+  const job: Promise<mindSporeLite.Model> = loadModel(mgr);
+  pendingModel = job;
+  try {
+    return await job;
+  } finally {
+    pendingModel = undefined;
+  }
+}
 
+/** 从 rawfile 加载模型（进程内只加载一次，常驻内存） */
+async function loadModel(mgr: resourceManager.ResourceManager): Promise<mindSporeLite.Model> {
   const raw: Uint8Array = await mgr.getRawFileContent(MODEL_NAME);
   hilog.info(DOMAIN, TAG, 'model bytes = %{public}d', raw.byteLength);
 
@@ -82,6 +98,13 @@ async function ensureModel(mgr: resourceManager.ResourceManager): Promise<mindSp
 /**
  * PixelMap → 模型输入张量。
  * 流程：等比缩放到短边 256 → 中心裁剪 224×224 → 读 RGBA → 归一化为 Float32
+ *
+ * ⚠️ 必须在副本上做。scale() / crop() 是**原地变换**，直接在调用方传进来的
+ * PixelMap 上执行会有两个后果：
+ *   1. 识图页的预览图变成一张 224×224 的中心裁剪（用户看着像「放大了一角」）；
+ *   2. LowCarbonClassifier 先跑视觉、再拿同一个 pm 跑 OCR，OCR 收到的就是裁剪图，
+ *      文字被裁掉，识别质量崩掉。
+ * 原先标定表为空、视觉通路没真正跑过，所以这个错误一直潜伏着。
  */
 async function preprocess(pixelMap: image.PixelMap): Promise<ArrayBuffer> {
   const info: image.ImageInfo = await pixelMap.getImageInfo();
@@ -92,20 +115,30 @@ async function preprocess(pixelMap: image.PixelMap): Promise<ArrayBuffer> {
     throw new Error('invalid image size');
   }
 
-  const scale: number = RESIZE_SHORT / Math.min(w, h);
-  await pixelMap.scale(scale, scale);
-
-  const after: image.ImageInfo = await pixelMap.getImageInfo();
-  const ax: number = Math.floor((after.size.width - INPUT_W) / 2);
-  const ay: number = Math.floor((after.size.height - INPUT_H) / 2);
-  await pixelMap.crop({
-    x: ax < 0 ? 0 : ax,
-    y: ay < 0 ? 0 : ay,
-    size: { width: INPUT_W, height: INPUT_H }
-  });
-
   const rgba: ArrayBuffer = new ArrayBuffer(INPUT_W * INPUT_H * 4);
-  await pixelMap.readPixelsToBuffer(rgba);
+  const work: image.PixelMap = await pixelMap.clone();
+  try {
+    const scale: number = RESIZE_SHORT / Math.min(w, h);
+    await work.scale(scale, scale);
+
+    const after: image.ImageInfo = await work.getImageInfo();
+    const ax: number = Math.floor((after.size.width - INPUT_W) / 2);
+    const ay: number = Math.floor((after.size.height - INPUT_H) / 2);
+    await work.crop({
+      x: ax < 0 ? 0 : ax,
+      y: ay < 0 ? 0 : ay,
+      size: { width: INPUT_W, height: INPUT_H }
+    });
+
+    await work.readPixelsToBuffer(rgba);
+  } finally {
+    try {
+      await work.release();
+    } catch (e) {
+      hilog.warn(DOMAIN, TAG, 'release temp pixelmap failed');
+    }
+  }
+
   const u8: Uint8Array = new Uint8Array(rgba);
 
   const out: Float32Array = new Float32Array(INPUT_W * INPUT_H * 3);
@@ -177,7 +210,15 @@ export async function debugOutputShape(
     `output.shape=${outShape} elementNum=${outputs[0].elementNum}`;
 }
 
-/** 释放常驻模型（页面销毁时可选调用） */
+/**
+ * 清空常驻模型引用。
+ *
+ * 注意用词：这**不是**显式释放 native 内存。ArkTS 侧的 mindSporeLite.Model
+ * 没有公开的 destroy/release 接口，置空后只保证下一次 ensureModel 重新加载，
+ * 那 11.4 MB 要等 GC 回收。改名前它叫 releaseModel，看起来像释放，其实没有，
+ * 属名实不符；调用点（AiSelfCheck.freeAiModel）语义也随之变成「卸载缓存」。
+ * 若日后 SDK 提供了真正的释放接口，在下面补一行即可。
+ */
 export function releaseModel(): void {
   const m: mindSporeLite.Model | undefined = cachedModel;
   if (m !== undefined) {
