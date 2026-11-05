@@ -132,6 +132,16 @@ struct Index {
     }
   }
 
+  /**
+   * 重试初始化。
+   * 数据层失败多是一次性原因（分布式服务未就绪、首次授权未完成），
+   * 原来失败就停在这屏，只能杀进程重开 —— 演示时这一步很扎眼。
+   */
+  private retry(): void {
+    this.errMsg = '';
+    this.boot();
+  }
+
   build() {
     Column() {
       if (this.ready) {
@@ -207,6 +217,17 @@ struct Index {
             .margin({ top: Space.MD })
             .textAlign(TextAlign.Center)
             .padding({ left: Space.HUGE, right: Space.HUGE })
+          // 与全站一致的方角描边按钮：不填充、无圆角、无阴影
+          Button('重试', { type: ButtonType.Normal })
+            .fontSize(FontSize.BODY_M)
+            .fontColor(Ink.L1)
+            .backgroundColor(Color.Transparent)
+            .border({ width: 1, color: Rule.STRONG })
+            .borderRadius(2)
+            .width(160)
+            .height(44)
+            .margin({ top: Space.LG })
+            .onClick(() => this.retry())
         }
         .justifyContent(FlexAlign.Center)
         .width('100%')

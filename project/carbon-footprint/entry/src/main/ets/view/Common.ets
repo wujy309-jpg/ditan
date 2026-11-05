@@ -26,6 +26,25 @@ import { roughRect } from './Rough';
 import { Category } from '../model/Models';
 
 // ---------------------------------------------------------------------------
+// @BuilderParam 的默认值
+// ---------------------------------------------------------------------------
+
+/**
+ * 空构建函数，只用作 @BuilderParam 的本地默认值。
+ *
+ * ArkTS 规定：组件属性若支持本地初始化，就必须给出一个「合法的、不依赖运行时」的默认值。
+ * HeroCard / SectionCard / RingStat 的 content 都是 @BuilderParam 且原先没有默认值，
+ * 预览代码检查会在这三处报 265 / 345 / 575 行。
+ *
+ * 给一个什么都不画的全局 @Builder 兜底：
+ *   · 调用方照旧用尾随闭包 `Component() { ... }` 初始化，会覆盖该默认值，行为不变；
+ *   · 万一某处漏传 content，渲染成空，而不是编译报错或白屏。
+ */
+@Builder
+function blankContent() {
+}
+
+// ---------------------------------------------------------------------------
 // 类目 → 颜色
 // ---------------------------------------------------------------------------
 
@@ -262,7 +281,7 @@ export struct HeroCard {
   @Prop stamp: string = '碳迹';
   /** > 0 时右上角盖「连续 N 天」方印（没有连续数据时才显示「碳迹」二字章） */
   @Prop days: number = 0;
-  @BuilderParam content: () => void;
+  @BuilderParam content: () => void = blankContent;
 
   build() {
     Column() {
@@ -342,7 +361,7 @@ export struct SectionCard {
   @Prop badge: string = '';
   @Prop badgeColor: string = SealColor.RED;
   @Prop badgeSoft: string = SealColor.RED_SOFT;
-  @BuilderParam content: () => void;
+  @BuilderParam content: () => void = blankContent;
 
   build() {
     Column() {
@@ -572,7 +591,7 @@ export struct RingStat {
   @Prop ringWidth: number = 3;
   @Prop trackColor: string = Edge.ON_BRAND;
   @Prop ringColor: string = SealColor.RED;
-  @BuilderParam content: () => void;
+  @BuilderParam content: () => void = blankContent;
 
   build() {
     Stack({ alignContent: Alignment.Center }) {

@@ -17,6 +17,7 @@
  */
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DistributedStore } from '../common/DistributedStore';
+import { Mutex } from '../common/Mutex';
 
 const DOMAIN: number = 0x0004;
 const TAG: string = 'CarbonXPlat';
@@ -66,6 +67,11 @@ export interface PlatformAccount {
   reportedTotal: number;
   /** 累计已兑换次数 */
   exchangedCount: number;
+  /**
+   * 最近一次成功上报的请求号（幂等键）。
+   * 老数据没有这个字段，读出来是 undefined，按空串处理即可。
+   */
+  lastReportId?: string;
 }
 
 /** 统一返回结构 */
@@ -147,6 +153,8 @@ function makeOrderId(): string {
 
 export class CarbonInclusiveApi {
   private store: DistributedStore;
+  /** 账户/库存的读-改-写互斥：兑换与上报都不能基于旧快照写回 */
+  private gate: Mutex = new Mutex();
 
   constructor(store: DistributedStore) {
     this.store = store;
@@ -207,26 +215,46 @@ export class CarbonInclusiveApi {
 
   /**
    * 把本地碳积分上报到平台（积分互通）。
-   * 幂等设计：上报的是「增量」，由调用方保证只上报一次未上报的部分。
+   *
+   * 幂等靠 requestId：同一笔请求被重复提交（重试 / 页面重入 / 两台设备同时点）时，
+   * 第二次直接返回「已上报」，不会把积分记两遍。
+   * 原实现没有任何幂等键，只靠调用方算 `unreported` 兜着——注释里写的「幂等」
+   * 其实没有兑现，跨页面重入就会重复加。
    */
-  async reportPoints(points: number): Promise<ApiResult> {
+  async reportPoints(points: number, requestId: string): Promise<ApiResult> {
     await delay(400);
-    const acc: PlatformAccount = await this.getAccount();
-    if (!acc.bound) {
-      const r: ApiResult = { code: ApiCode.NOT_BOUND, message: '请先绑定碳普惠账户', orderId: '' };
+    const release: () => void = await this.gate.lock();
+    try {
+      const acc: PlatformAccount = await this.getAccount();
+      if (!acc.bound) {
+        const r: ApiResult = { code: ApiCode.NOT_BOUND, message: '请先绑定碳普惠账户', orderId: '' };
+        return r;
+      }
+      if (points <= 0) {
+        const r: ApiResult = { code: ApiCode.OK, message: '没有需要上报的积分', orderId: '' };
+        return r;
+      }
+      const lastId: string = acc.lastReportId === undefined ? '' : acc.lastReportId;
+      if (requestId.length > 0 && lastId === requestId) {
+        const dup: ApiResult = {
+          code: ApiCode.OK,
+          message: '该笔积分已上报，未重复计入',
+          orderId: ''
+        };
+        hilog.info(DOMAIN, TAG, 'duplicate report ignored: %{public}s', requestId);
+        return dup;
+      }
+      acc.points += points;
+      acc.reportedTotal += points;
+      acc.lastReportTs = Date.now();
+      acc.lastReportId = requestId;
+      await this.store.putObject<PlatformAccount>(K_ACCOUNT, acc);
+      hilog.info(DOMAIN, TAG, 'reported %{public}d points, total=%{public}d', points, acc.points);
+      const r: ApiResult = { code: ApiCode.OK, message: `已上报 ${points} 平台积分`, orderId: '' };
       return r;
+    } finally {
+      release();
     }
-    if (points <= 0) {
-      const r: ApiResult = { code: ApiCode.OK, message: '没有需要上报的积分', orderId: '' };
-      return r;
-    }
-    acc.points += points;
-    acc.reportedTotal += points;
-    acc.lastReportTs = Date.now();
-    await this.store.putObject<PlatformAccount>(K_ACCOUNT, acc);
-    hilog.info(DOMAIN, TAG, 'reported %{public}d points, total=%{public}d', points, acc.points);
-    const r: ApiResult = { code: ApiCode.OK, message: `已上报 ${points} 平台积分`, orderId: '' };
-    return r;
   }
 
   // ------------------------------------------------------------------
@@ -258,67 +286,76 @@ export class CarbonInclusiveApi {
   /**
    * 兑换权益。
    * 完整走一遍真实平台的校验顺序：账户 → 库存 → 积分 → 扣减 → 出单。
+   *
+   * 整个「读账户/库存 → 校验 → 写回」被 gate 锁住：原实现是典型的 TOCTOU，
+   * 两次并发或双击会让库存与积分都只扣一次、订单却出两单（超卖）。
+   * 跨设备并发仍然拦不住（分布式 KV 无事务），这是声明过的边界，
+   * 单进程内必须是对的。
    */
   async exchange(benefitId: string): Promise<ApiResult> {
     await delay(600);
-
-    const acc: PlatformAccount = await this.getAccount();
-    if (!acc.bound) {
-      const r: ApiResult = { code: ApiCode.NOT_BOUND, message: '请先绑定碳普惠账户', orderId: '' };
-      return r;
-    }
-
-    let target: Benefit | undefined = undefined;
-    for (let i = 0; i < BENEFITS.length; i++) {
-      if (BENEFITS[i].id === benefitId) {
-        target = BENEFITS[i];
-        break;
+    const release: () => void = await this.gate.lock();
+    try {
+      const acc: PlatformAccount = await this.getAccount();
+      if (!acc.bound) {
+        const r: ApiResult = { code: ApiCode.NOT_BOUND, message: '请先绑定碳普惠账户', orderId: '' };
+        return r;
       }
-    }
-    if (target === undefined) {
-      const r: ApiResult = { code: ApiCode.NETWORK, message: '权益不存在', orderId: '' };
-      return r;
-    }
 
-    const used: number | undefined = await this.store.getObject<number>(K_STOCK + target.id);
-    const usedCount: number = used === undefined ? 0 : used;
-    if (usedCount >= target.stock) {
-      const r: ApiResult = { code: ApiCode.OUT_OF_STOCK, message: '该权益已兑完', orderId: '' };
-      return r;
-    }
+      let target: Benefit | undefined = undefined;
+      for (let i = 0; i < BENEFITS.length; i++) {
+        if (BENEFITS[i].id === benefitId) {
+          target = BENEFITS[i];
+          break;
+        }
+      }
+      if (target === undefined) {
+        const r: ApiResult = { code: ApiCode.NETWORK, message: '权益不存在', orderId: '' };
+        return r;
+      }
 
-    if (acc.points < target.cost) {
+      const used: number | undefined = await this.store.getObject<number>(K_STOCK + target.id);
+      const usedCount: number = used === undefined ? 0 : used;
+      if (usedCount >= target.stock) {
+        const r: ApiResult = { code: ApiCode.OUT_OF_STOCK, message: '该权益已兑完', orderId: '' };
+        return r;
+      }
+
+      if (acc.points < target.cost) {
+        const r: ApiResult = {
+          code: ApiCode.INSUFFICIENT,
+          message: `平台积分不足，还差 ${target.cost - acc.points} 分`,
+          orderId: ''
+        };
+        return r;
+      }
+
+      // 扣积分、扣库存、出单
+      acc.points -= target.cost;
+      acc.exchangedCount += 1;
+      await this.store.putObject<PlatformAccount>(K_ACCOUNT, acc);
+      await this.store.putObject<number>(K_STOCK + target.id, usedCount + 1);
+
+      const order: ExchangeOrder = {
+        orderId: makeOrderId(),
+        benefitId: target.id,
+        benefitName: target.name,
+        cost: target.cost,
+        ts: Date.now()
+      };
+      await this.store.putObject<ExchangeOrder>(K_ORDER + order.orderId, order);
+
+      hilog.info(DOMAIN, TAG, 'exchanged %{public}s order=%{public}s',
+        target.name, order.orderId);
       const r: ApiResult = {
-        code: ApiCode.INSUFFICIENT,
-        message: `平台积分不足，还差 ${target.cost - acc.points} 分`,
-        orderId: ''
+        code: ApiCode.OK,
+        message: `兑换成功：${target.name}`,
+        orderId: order.orderId
       };
       return r;
+    } finally {
+      release();
     }
-
-    // 扣积分、扣库存、出单
-    acc.points -= target.cost;
-    acc.exchangedCount += 1;
-    await this.store.putObject<PlatformAccount>(K_ACCOUNT, acc);
-    await this.store.putObject<number>(K_STOCK + target.id, usedCount + 1);
-
-    const order: ExchangeOrder = {
-      orderId: makeOrderId(),
-      benefitId: target.id,
-      benefitName: target.name,
-      cost: target.cost,
-      ts: Date.now()
-    };
-    await this.store.putObject<ExchangeOrder>(K_ORDER + order.orderId, order);
-
-    hilog.info(DOMAIN, TAG, 'exchanged %{public}s order=%{public}s',
-      target.name, order.orderId);
-    const r: ApiResult = {
-      code: ApiCode.OK,
-      message: `兑换成功：${target.name}`,
-      orderId: order.orderId
-    };
-    return r;
   }
 
   /** 查询兑换记录，按时间倒序 */

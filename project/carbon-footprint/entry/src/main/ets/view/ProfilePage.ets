@@ -126,7 +126,8 @@ export struct ProfilePage {
     }
     const p: Profile = await repo.getProfile();
     this.nickname = p.nickname;
-    this.familyId = p.familyId;
+    // 'default' 是建档占位值，不该出现在输入框里 —— 留空让 placeholder 接管
+    this.familyId = p.familyId === 'default' ? '' : p.familyId;
 
     const total: number = await repo.totalSaved();
     const count: number = (await repo.listBehaviors()).length;
@@ -164,6 +165,11 @@ export struct ProfilePage {
     }
 
     const snap: SyncSnapshot = repo.snapshot();
+    // 本机模式（预览器 / 未授予分布式权限 / 订阅失败）：跨设备能力确实不可用，
+    // 说清楚原因，别让人误以为只是「暂时没发现设备」。
+    if (snap.localOnly) {
+      peerDesc = '本机模式 · 跨设备同步不可用';
+    }
     this.syncOutcome = snap.lastOutcome;
     this.syncRows = [
       { label: '本机标识', value: localId },
@@ -294,7 +300,9 @@ export struct ProfilePage {
     }
     const p: Profile = await repo.getProfile();
     p.nickname = this.nickname;
-    p.familyId = this.familyId;
+    // 空输入回落到 'default'，与 CarbonRepository 建档时的默认值保持一致；
+    // 界面上则把 'default' 当作「未设置」，否则输入框里会明晃晃写着 default。
+    p.familyId = this.familyId.length > 0 ? this.familyId : 'default';
     await repo.saveProfile(p);
     this.msgOk = true;
     this.msg = '档案已保存，并会同步到其他设备';

@@ -70,6 +70,8 @@ export interface SyncSnapshot {
   conflictCount: number;
   /** 累计收到远端写入次数 */
   remoteWriteCount: number;
+  /** 是否处于本机模式（变更订阅失败，跨设备同步不可用） */
+  localOnly: boolean;
 }
 
 /** 数据变更事件 */
@@ -124,6 +126,16 @@ export class DistributedStore {
   /** 本地影子副本：记录每个键「本机已知」的最新信封，用于冲突判定 */
   private shadow: Map<string, Envelope> = new Map<string, Envelope>();
   private listeners: ChangeListener[] = [];
+
+  /**
+   * 变更订阅是否成功。
+   *
+   * false 表示「本机模式」：读写、统计、导出全部照常，只是收不到其它设备的变更。
+   * 预览器与部分模拟器不支持 dataChange 订阅（实测直接抛异常，且 err.code / err.message
+   * 都是空的），真机上也可能因为未授予 DISTRIBUTED_DATASYNC 而订阅失败。
+   * 这类环境不支持跨设备是「预期内的降级」，不该让整个应用起不来。
+   */
+  private changeSubscribed: boolean = false;
 
   private conflictCount: number = 0;
   private remoteWriteCount: number = 0;
@@ -221,15 +233,23 @@ export class DistributedStore {
   // 读写
   // ------------------------------------------------------------------
 
-  /** 写入字符串。自动盖时间戳并更新影子副本 */
+  /**
+   * 写入字符串。自动盖时间戳并更新影子副本。
+   *
+   * 顺序很关键：**先落库、再记影子副本**。
+   * 原实现先把新信封写进 shadow 再 await kvPut；kvPut 失败时
+   * 影子副本里已经有一个「KV 中并不存在」的版本号，之后 handleChange
+   * 拿它跟远端比大小，再由「本机更新则回写」的逻辑写回 KV ——
+   * 一次从没成功过的写入就这样复活了。
+   */
   async put(key: string, value: string): Promise<void> {
     const envelope: Envelope = {
       payload: value,
       ts: Date.now(),
       origin: this.localDeviceId
     };
-    this.shadow.set(key, envelope);
     await this.kvPut(this.fullKey(key), JSON.stringify(envelope));
+    this.shadow.set(key, envelope);
   }
 
   /** 读取字符串，键不存在时返回 undefined */
@@ -242,10 +262,10 @@ export class DistributedStore {
     return this.unwrap(raw);
   }
 
-  /** 删除键 */
+  /** 删除键（同样先落库成功再动影子副本，理由见 put） */
   async delete(key: string): Promise<void> {
-    this.shadow.delete(key);
     await this.kvDelete(this.fullKey(key));
+    this.shadow.delete(key);
   }
 
   /** 列出全部业务键（已去掉前缀） */
@@ -318,6 +338,12 @@ export class DistributedStore {
    * 结果同时写入内部状态，可用 snapshot() 读取。
    */
   async sync(): Promise<SyncOutcome> {
+    // 单机模式：订阅没成功，远端变更根本收不到，同步也等不到 syncComplete，
+    // 直接返回「无对端」，不让用户白等 15 秒。
+    if (!this.changeSubscribed) {
+      this.lastOutcome = SyncOutcome.NO_PEER;
+      return this.lastOutcome;
+    }
     const peers: PeerDevice[] = this.refreshPeers();
     if (peers.length === 0) {
       this.lastOutcome = SyncOutcome.NO_PEER;
@@ -350,14 +376,16 @@ export class DistributedStore {
     }
   }
 
-  /** 当前同步状态快照 */
+  /** 当前同步状态快照（peers 必须拷贝：直接给内部数组的引用，UI 侧拿到的
+   *  还是同一个对象，赋值给 @State 时不会触发刷新） */
   snapshot(): SyncSnapshot {
     const snap: SyncSnapshot = {
-      peers: this.peers,
+      peers: this.peers.slice(),
       lastSyncTime: this.lastSyncTime,
       lastOutcome: this.lastOutcome,
       conflictCount: this.conflictCount,
-      remoteWriteCount: this.remoteWriteCount
+      remoteWriteCount: this.remoteWriteCount,
+      localOnly: !this.changeSubscribed
     };
     return snap;
   }
@@ -411,11 +439,17 @@ export class DistributedStore {
   private subscribeChange(): void {
     try {
       this.kvStore.on('dataChange', distributedKVStore.SubscribeType.SUBSCRIBE_TYPE_ALL, this.changeHandler);
+      this.changeSubscribed = true;
     } catch (e) {
       const err = e as BusinessError;
-      hilog.error(DOMAIN, TAG, 'subscribe dataChange failed code=%{public}d msg=%{public}s',
+      // 【实测修复】预览器与部分模拟器不支持 dataChange 订阅，抛出的异常连
+      // code / message 都是空的（日志里只能看到 "code= msg="）。
+      // 订阅失败只意味着「收不到远端变更」，本机读写、统计、导出全都正常，
+      // 所以这里降级为单机模式后直接返回：继续向上抛会让整个应用停在「启动失败」页。
+      this.changeSubscribed = false;
+      hilog.warn(DOMAIN, TAG,
+        'subscribe dataChange failed, fallback to local-only: code=%{public}d msg=%{public}s',
         err.code, err.message);
-      throw new Error(`subscribe dataChange failed: code=${err.code} msg=${err.message}`);
     }
   }
 
@@ -566,8 +600,19 @@ export class DistributedStore {
       const key: string = this.shortKey(entry.key);
       const local: Envelope | undefined = this.shadow.get(key);
 
-      // 本机版本更新 → 冲突，以本机为准并回写，避免被较旧数据覆盖
-      if (local !== undefined && local.ts > incoming.ts) {
+      // 同一版本的回声（本机刚写的那条被 KV 再通知回来）：不动影子、不发事件，
+      // 否则每一次本机写入都会触发一次多余的界面刷新。
+      if (local !== undefined && local.ts === incoming.ts && local.origin === incoming.origin) {
+        continue;
+      }
+
+      // 本机版本更新 → 冲突，以本机为准并回写，避免被较旧数据覆盖。
+      // 比较用 (ts, origin) 字典序：只比毫秒时间戳时，两台设备时钟差几秒
+      // 就会把「更旧的远端版本」判成赢家；origin 至少在时间戳相同时给出确定的赢家。
+      if (local !== undefined && this.isNewer(local, incoming)) {
+        if (!fromRemote) {
+          continue;
+        }
         this.conflictCount++;
         hilog.info(DOMAIN, TAG,
           'conflict on key=%{public}s: local ts=%{public}d wins over remote ts=%{public}d',
@@ -601,29 +646,28 @@ export class DistributedStore {
     }
   }
 
+  /** (ts, origin) 字典序比较：时间戳优先，相同则用设备号定胜负 */
+  private isNewer(a: Envelope, b: Envelope): boolean {
+    if (a.ts !== b.ts) {
+      return a.ts > b.ts;
+    }
+    return a.origin > b.origin;
+  }
+
   private waitSyncComplete(deviceIds: string[]): Promise<SyncOutcome> {
     return new Promise<SyncOutcome>((resolve: (value: SyncOutcome) => void) => {
       let settled: boolean = false;
-
-      const finish = (outcome: SyncOutcome): void => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        try {
-          this.kvStore.off('syncComplete');
-        } catch (e) {
-          hilog.warn(DOMAIN, TAG, 'off syncComplete failed');
-        }
-        resolve(outcome);
+      let timer: number = -1;
+      // 先占位、后赋实现：onSyncComplete 与 finish 互相引用（注销必须拿到回调引用），
+      // 用 let 占位可以避免「常量在声明之前被使用」的时序隐患。
+      let finish: (outcome: SyncOutcome) => void = (outcome: SyncOutcome): void => {
       };
 
-      const timer: number = setTimeout(() => {
-        finish(SyncOutcome.TIMEOUT);
-      }, SYNC_TIMEOUT_MS);
-
-      this.kvStore.on('syncComplete', (result: Array<[string, number]>) => {
-        clearTimeout(timer);
+      // 具名回调：注销时必须传回同一个引用。
+      // 原实现 finish 里调 off('syncComplete') 不带回调，会把**所有**等待者的
+      // 监听一并摘掉——两次并发 sync 时，先结束的那次让第二次永远收不到回调，
+      // 只能干等 SYNC_TIMEOUT_MS（15 秒）。
+      const onSyncComplete = (result: Array<[string, number]>): void => {
         let ok: number = 0;
         let bad: number = 0;
         for (let i = 0; i < result.length; i++) {
@@ -640,12 +684,34 @@ export class DistributedStore {
         } else {
           finish(SyncOutcome.FAILED);
         }
-      });
+      };
+
+      finish = (outcome: SyncOutcome): void => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (timer !== -1) {
+          clearTimeout(timer);
+          timer = -1;
+        }
+        try {
+          this.kvStore.off('syncComplete', onSyncComplete);
+        } catch (e) {
+          hilog.warn(DOMAIN, TAG, 'off syncComplete failed');
+        }
+        resolve(outcome);
+      };
+
+      timer = setTimeout(() => {
+        finish(SyncOutcome.TIMEOUT);
+      }, SYNC_TIMEOUT_MS);
+
+      this.kvStore.on('syncComplete', onSyncComplete);
 
       try {
         this.kvStore.sync(deviceIds, distributedKVStore.SyncMode.PUSH_PULL);
       } catch (e) {
-        clearTimeout(timer);
         const err = e as BusinessError;
         hilog.error(DOMAIN, TAG, 'sync failed: code=%{public}d msg=%{public}s', err.code, err.message);
         finish(SyncOutcome.FAILED);

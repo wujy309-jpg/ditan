@@ -426,6 +426,12 @@ export struct DashboardPage {
     return Math.round((this.total / KG_PER_TREE_PER_YEAR) * 10) / 10;
   }
 
+  /** 距离下一棵树还差多少 kg —— 比把总量再念一遍更有用 */
+  private nextTreeGap(): number {
+    const rem: number = this.total % KG_PER_TREE_PER_YEAR;
+    return Math.round((KG_PER_TREE_PER_YEAR - rem) * 10) / 10;
+  }
+
   /** 分类总量，用于算占比 */
   private catSum(): number {
     let s: number = 0;
@@ -603,7 +609,7 @@ export struct DashboardPage {
       Scroll() {
         Column() {
           // ============ 英雄区：累计减排 + 今日目标环 ============
-          HeroCard({ variant: 'deep', period: `${this.count} 条`, stamp: '碳迹', days: this.streak }) {
+          HeroCard({ variant: 'deep', period: today(), stamp: '碳迹', days: this.streak }) {
             Column() {
               Text('累 计 减 排')
                 .fontSize(10)
@@ -717,7 +723,9 @@ export struct DashboardPage {
             .width('100%')
             .justifyContent(FlexAlign.Center)
 
-            Text(`累计 ${this.total} kg CO₂e · 折合 ${this.trees()} 棵树·年`)
+            // 原来这里写「累计 20.58 kg · 折合 1.1 棵树·年」，与刊头一字不差地重复。
+            // 换成「距下一棵树还差多少」—— 同一个事实的可行动版本。
+            Text(`距下一棵树还差 ${this.nextTreeGap()} kg`)
               .fontSize(10)
               .fontColor(Ink.L3)
               .fontFeature('"tnum" 1')
