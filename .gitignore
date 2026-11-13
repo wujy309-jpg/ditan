@@ -59,3 +59,6 @@ tools/rar/
 **/build/
 **/node_modules/
 *.log
+
+# 编译验证用的 ASCII 副本（tools/build 或本地 hvigor 试验产生，勿提交）
+/.build/

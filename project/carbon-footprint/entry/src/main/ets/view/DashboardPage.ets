@@ -22,7 +22,7 @@ import { CarbonRepository, CategoryTotal } from '../data/CarbonRepository';
 import { BehaviorRecord, categoryLabel, formatDate, round2, today } from '../model/Models';
 import { CategoryBarChart, CategoryPieChart, ChartPayload, TrendLineChart } from './Charts';
 import { SmartService } from './SmartService';
-import { catColor, CardTitle, Chip, EmptyHint, HeroCard, RankRow, RingStat, SectionCard } from './Common';
+import { catColor, CardTitle, Chip, EmptyHint, HeroCard, RankRow, SectionCard } from './Common';
 import {
   Bg, Brand, Edge, FontSize, Heat, Ink, Motion, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   shadowCard

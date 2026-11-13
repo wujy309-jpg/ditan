@@ -32,6 +32,9 @@ import {
   today
 } from '../model/Models';
 
+/** 单次记录的数量上限：100000 只是「大到不可能」，用来挡住无穷大与误粘贴 */
+const AMOUNT_MAX: number = 100000;
+
 /**
  * 每日低碳目标（kg CO₂e）。
  * 取 3.0 的依据：按本应用因子库，单人每日通勤改为步行/骑行约可减排 2~4 kg，
@@ -170,12 +173,26 @@ export struct EntryPage {
     return this.factorId.length > 0;
   }
 
+  /**
+   * 解析输入框的数量。
+   * 三个边界一起挡：非数 / Infinity（1e999 这类）/ 超过上限。
+   * 原来只判 `amt > 0`，Infinity 能一路存进账本并同步到另一台设备，
+   * 图表上表现为一根顶到天的柱子，且只能靠删记录找回。
+   */
+  private inputAmount(): number {
+    const amt: number = Number.parseFloat(this.amount);
+    if (!(amt > 0) || !Number.isFinite(amt) || amt > AMOUNT_MAX) {
+      return 0;
+    }
+    return amt;
+  }
+
   /** 实时预览：当前输入能减排多少 */
   private preview(): string {
     if (!this.hasFactor()) {
       return '—';
     }
-    const amt: number = Number.parseFloat(this.amount);
+    const amt: number = this.inputAmount();
     if (!(amt > 0)) {
       return '—';
     }
@@ -291,10 +308,10 @@ export struct EntryPage {
       this.hint = '请先选择行为类型';
       return;
     }
-    const amt: number = Number.parseFloat(this.amount);
+    const amt: number = this.inputAmount();
     if (!(amt > 0)) {
       this.hintOk = false;
-      this.hint = '请输入大于 0 的数量';
+      this.hint = `请输入 0 到 ${AMOUNT_MAX} 之间的数量`;
       return;
     }
 

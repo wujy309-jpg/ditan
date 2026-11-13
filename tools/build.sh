@@ -33,16 +33,33 @@ mkdir -p "$DST"
 (cd "$SRC" && tar cf - --exclude=build --exclude=.hvigor --exclude=oh_modules .) \
   | (cd "$DST" && tar xf -)
 
-# 2) 依赖检查
+# 2) 定位 DevEco（跨平台：macOS / Windows / 自定义安装盘都走这里）
+. "$WS_ROOT/tools/lib/deveco.sh"
+if ! deveco_locate; then
+  exit 1
+fi
+echo "DevEco：$DEVECO_HOME"
+
+# npm 缓存默认在用户目录，受限环境里会 EPERM；指到可写目录
+export npm_config_cache="${npm_config_cache:-${TMPDIR:-/tmp}/carbon-npm-cache}"
+mkdir -p "$npm_config_cache" 2>/dev/null || true
+
+# 3) 依赖检查
 if [ ! -d "$DST/oh_modules" ]; then
   echo "提示：尚未安装依赖，正在执行 ohpm install …"
   export OHPM_HOME="${OHPM_HOME:-$HOME/.ohpm}"
-  (cd "$DST" && /Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm install)
+  (cd "$DST" && "$DEVECO_OHPM" install)
 fi
 
-# 3) 构建
+# 4) 构建
+#    macOS 上工程的 ./hvigorw 可直接跑；Windows 下它也依赖 DevEco 自带的 node，
+#    所以统一用「DevEco 的 node 跑 hvigorw.js」，两条路径产物一致。
 cd "$DST"
-./hvigorw "${1:-assembleHap}" --no-daemon
+if [ -n "${DEVECO_NODE:-}" ] && [ -f "${DEVECO_HVIGORW:-}" ]; then
+  "$DEVECO_NODE" "$DEVECO_HVIGORW" "${1:-assembleHap}" --no-daemon
+else
+  ./hvigorw "${1:-assembleHap}" --no-daemon
+fi
 
 echo
 echo "构建产物："

@@ -23,9 +23,13 @@
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
-DEVECO_APP="${DEVECO_APP:-/Applications/DevEco-Studio.app}"
-EMU="$DEVECO_APP/Contents/tools/emulator/Emulator"
-HDC="$DEVECO_APP/Contents/sdk/default/openharmony/toolchains/hdc"
+# 跨平台定位 DevEco（见 tools/lib/deveco.sh）
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/deveco.sh"
+if ! deveco_locate; then
+  exit 1
+fi
+EMU="$DEVECO_EMULATOR"
+HDC="$DEVECO_HDC"
 PROJECT="${CARBON_PROJECT_DIR:-$HOME/DevEcoStudioProjects/carbon-footprint}"
 
 EMU_NAME="${EMU_NAME:-carbon}"

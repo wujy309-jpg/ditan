@@ -25,8 +25,12 @@
 set -euo pipefail
 
 WS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEVECO_APP="${DEVECO_APP:-/Applications/DevEco-Studio.app}"
-HDC="$DEVECO_APP/Contents/sdk/default/openharmony/toolchains/hdc"
+# 跨平台定位 DevEco（见 tools/lib/deveco.sh）
+. "$WS_ROOT/tools/lib/deveco.sh"
+if ! deveco_locate; then
+  exit 1
+fi
+HDC="$DEVECO_HDC"
 BUNDLE="com.henan.carbonfootprint"
 HAP="$HOME/DevEcoStudioProjects/carbon-footprint/entry/build/default/outputs/default/entry-default-signed.hap"
 

@@ -8,10 +8,8 @@
  *   HeroCard     抬头区：墨色封面 + 期次 + 朱印 + 双线
  *   SectionCard  账目段：宋体小标题 + 双线 + 内容
  *   CardTitle    段内二级标题
- *   StatTile     一格数（标签上、数字下、右对齐）
  *   Chip         方角筛选器（选中 = 墨底纸字）
  *   RankRow      分类明细行（引导点线 + 细比例条）
- *   RingStat     环形进度（朱砂）
  *   EmptyHint    空账页提示
  *   InfoRow      账目「项 —— 值」行
  *   Seal         朱砂印章（新）
@@ -447,42 +445,6 @@ export struct CardTitle {
  * 数字必须 tnum，否则每格宽度会随数字变化而抖动。
  */
 @Component
-export struct StatTile {
-  @Prop value: string = '0';
-  @Prop unit: string = '';
-  @Prop label: string = '';
-  @Prop valueColor: string = Ink.L1;
-
-  build() {
-    Column() {
-      Text(this.label)
-        .fontSize(FontSize.CAPTION)
-        .fontColor(Ink.L3)
-        .letterSpacing(0.8)
-        .width('100%')
-
-      Row() {
-        Text(this.value)
-          .fontSize(FontSize.TITLE_M)
-          .fontWeight(Weight.DISPLAY)
-          .fontColor(this.valueColor)
-          .fontFeature('"tnum" 1')
-        if (this.unit.length > 0) {
-          Text(this.unit)
-            .fontSize(FontSize.CAPTION)
-            .fontColor(Ink.L3)
-            .margin({ left: 2, bottom: 3 })
-        }
-      }
-      .alignItems(VerticalAlign.Bottom)
-      .width('100%')
-      .margin({ top: 2 })
-    }
-    .layoutWeight(1)
-    .alignItems(HorizontalAlign.Start)
-    .padding({ left: 0 })
-  }
-}
 
 // ---------------------------------------------------------------------------
 // 筛选器
@@ -585,36 +547,6 @@ export struct RankRow {
 // ---------------------------------------------------------------------------
 
 @Component
-export struct RingStat {
-  @Prop percent: number = 0;
-  @Prop diameter: number = 88;
-  @Prop ringWidth: number = 3;
-  @Prop trackColor: string = Edge.ON_BRAND;
-  @Prop ringColor: string = SealColor.RED;
-  @BuilderParam content: () => void = blankContent;
-
-  build() {
-    Stack({ alignContent: Alignment.Center }) {
-      Progress({ value: 100, total: 100, type: ProgressType.Ring })
-        .width(this.diameter)
-        .height(this.diameter)
-        .color(this.trackColor)
-        .style({ strokeWidth: this.ringWidth, enableSmoothEffect: false })
-      Progress({ value: this.percent, total: 100, type: ProgressType.Ring })
-        .width(this.diameter)
-        .height(this.diameter)
-        .color(this.ringColor)
-        .style({ strokeWidth: this.ringWidth, enableSmoothEffect: true })
-      Column() {
-        this.content()
-      }
-      .alignItems(HorizontalAlign.Center)
-      .justifyContent(FlexAlign.Center)
-    }
-    .width(this.diameter)
-    .height(this.diameter)
-  }
-}
 
 // ---------------------------------------------------------------------------
 // 空状态

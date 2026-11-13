@@ -212,7 +212,7 @@ export function buildAdvice(records: BehaviorRecord[]): string[] {
   return out;
 }
 
-/** 汇总一句话结论，用于分享图 */
+/** 汇总一句话结论，用于分享图与逻辑测试（tests/logic.test.ts:216-217 断言它） */
 export function summaryLine(records: BehaviorRecord[]): string {
   let total: number = 0;
   for (let i = 0; i < records.length; i++) {

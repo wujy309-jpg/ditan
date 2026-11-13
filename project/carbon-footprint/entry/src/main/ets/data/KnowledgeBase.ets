@@ -155,16 +155,6 @@ export const ARTICLES: Article[] = [
   }
 ];
 
-/** 按标签筛选 */
-export function articlesOfTag(tag: string): Article[] {
-  const out: Article[] = [];
-  for (let i = 0; i < ARTICLES.length; i++) {
-    if (ARTICLES[i].tag === tag) {
-      out.push(ARTICLES[i]);
-    }
-  }
-  return out;
-}
 
 /** 全部标签（去重，保持出现顺序） */
 export function allTags(): string[] {

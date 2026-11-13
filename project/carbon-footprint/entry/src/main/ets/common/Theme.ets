@@ -224,12 +224,6 @@ export class Weight {
 // 阴影：账本不用投影。函数保留（页面在 import），一律返回全透明 ——
 // 这样二十多处 `.shadow(shadowCard())` 不用改一行页面代码就同时消失。
 // ---------------------------------------------------------------------------
-export interface Elevation {
-  radius: number;
-  color: string;
-  offsetX: number;
-  offsetY: number;
-}
 
 export function noShadow(): ShadowOptions {
   return { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
@@ -251,9 +245,6 @@ export function shadowBrand(): ShadowOptions {
   return noShadow();
 }
 
-export function shadowFloat(): ShadowOptions {
-  return noShadow();
-}
 
 // ---------------------------------------------------------------------------
 // 渐变：同理，全部压平成纯色。页面里的 `.linearGradient(heroGradient())`
@@ -271,55 +262,19 @@ export function heroGradientDeep(): LinearGradientOptions {
   return flat(Ink.DECK);
 }
 
-export function heroGradientFresh(): LinearGradientOptions {
-  return flat(Ink.DECK);
-}
 
 export function softGradient(): LinearGradientOptions {
   return flat(Bg.SUBTLE);
 }
 
-export function barGradient(): LinearGradientOptions {
-  return flat(Brand.PRIMARY);
-}
 
 export function buttonGradient(): LinearGradientOptions {
   return flat(Ink.L1);
 }
 
-export function ringGradient(): SweepGradientOptions {
-  return {
-    center: ['50%', '50%'],
-    start: 0,
-    end: 360,
-    colors: [[Seal.RED, 0.0], [Seal.RED, 1.0]]
-  };
-}
 
-export function heroGlow(): RadialGradientOptions {
-  return {
-    center: ['78%', '12%'],
-    radius: '62%',
-    colors: [['#00FFFFFF', 0.0], ['#00FFFFFF', 1.0]]
-  };
-}
 
-export function heroGlowStrong(): RadialGradientOptions {
-  return {
-    center: ['18%', '88%'],
-    radius: '70%',
-    colors: [['#00FFFFFF', 0.0], ['#00FFFFFF', 1.0]]
-  };
-}
 
-export function decoBlob(x: string, y: string, color: string): RadialGradientOptions {
-  const fade: string = `#00${color.substring(1)}`;
-  return {
-    center: [x, y],
-    radius: '55%',
-    colors: [[color, 0.0], [fade, 1.0]]
-  };
-}
 
 // ---------------------------------------------------------------------------
 // 动效：保留 v2 的物理曲线。账本不需要花哨动画，但「翻页/盖章」要有落点。
@@ -347,6 +302,4 @@ export class Motion {
   };
 }
 
-export const PRESS_SCALE: number = 0.96;
 export const ENTER_OFFSET: number = 14;
-export const STAGGER_STEP: number = 45;
