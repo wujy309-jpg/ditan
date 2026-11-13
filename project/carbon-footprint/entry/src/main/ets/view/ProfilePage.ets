@@ -26,6 +26,7 @@
  *      会出现「保存后数字不更新」的隐性 bug。
  */
 import { BusinessError } from '@kit.BasicServicesKit';
+import { abilityAccessCtrl, common, PermissionRequestResult, Permissions } from '@kit.AbilityKit';
 import { CarbonRepository } from '../data/CarbonRepository';
 import { PeerDevice, SyncOutcome, SyncSnapshot } from '../common/DistributedStore';
 import { Profile } from '../model/Models';
@@ -272,6 +273,33 @@ export struct ProfilePage {
     }
   }
 
+  /**
+   * 申请「分布式数据同步」权限。
+   *
+   * module.json5 里声明的是 user_grant 权限，系统默认拒绝；不调用
+   * requestPermissionsFromUser 就永远拿不到，于是 dataChange 订阅失败 →
+   * 降级成本机模式 → 同步面板永远显示「无可信设备」，双机同步一次都不会出现。
+   * 已授权的权限会立即返回成功，不会重复弹窗。
+   */
+  private async ensurePermission(): Promise<boolean> {
+    const rawCtx = this.getUIContext().getHostContext();
+    if (rawCtx === undefined) {
+      this.msg = '拿不到应用上下文，无法申请权限';
+      return false;
+    }
+    try {
+      const atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
+      const perms: Permissions[] = ['ohos.permission.DISTRIBUTED_DATASYNC'];
+      const res: PermissionRequestResult =
+        await atManager.requestPermissionsFromUser(rawCtx as common.Context, perms);
+      return res.authResults.length > 0 && res.authResults[0] === 0;
+    } catch (e) {
+      const err = e as BusinessError;
+      this.msg = `申请权限失败：${err.message}`;
+      return false;
+    }
+  }
+
   private async doSync(): Promise<void> {
     const repo: CarbonRepository | undefined = CarbonRepository.get();
     if (repo === undefined) {
@@ -280,6 +308,17 @@ export struct ProfilePage {
     this.syncing = true;
     this.msg = '';
     try {
+      // 本机模式多半是「权限没给」：先要权限，再重订阅，最后才同步。
+      // 顺序不能反 —— 没订阅成功时 sync() 会直接返回 NO_PEER，白跑一趟。
+      if (repo.snapshot().localOnly) {
+        const granted: boolean = await this.ensurePermission();
+        if (!granted) {
+          this.msgOk = false;
+          this.msg = '未授予「分布式数据同步」权限，跨设备同步不可用';
+          return;
+        }
+        repo.retrySubscribe();
+      }
       const outcome: SyncOutcome = await repo.syncNow();
       this.msgOk = outcome === SyncOutcome.SUCCESS;
       this.msg = `同步结束：${outcomeText(outcome)}`;

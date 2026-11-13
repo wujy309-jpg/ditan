@@ -8,6 +8,9 @@
  * 因此迷你趋势图用「一排不同高度的色块」实现，而不是图表库。
  */
 import { CardData } from '../CarbonCardAbility';
+// 卡片是 App 在桌面上的那一页，配色与圆角必须走同一套令牌，
+// 否则评委在桌面看到绿色圆卡、点进去是纸墨方册，像两个产品。
+import { Bg, Brand, Ink, Radius, Rule, Seal } from '../../common/Theme';
 
 /** 卡片通过 LocalStorage 接收 Ability 传来的数据 */
 let storage = new LocalStorage();
@@ -40,11 +43,11 @@ struct CarbonCard {
         Text('碳迹')
           .fontSize(14)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#1F9A4E')
+          .fontColor(Brand.PRIMARY)
         Blank()
         Text(this.dateText)
           .fontSize(11)
-          .fontColor('#66000000')
+          .fontColor(Ink.L3)
       }
       .width('100%')
 
@@ -54,10 +57,10 @@ struct CarbonCard {
         Text(this.todaySaved)
           .fontSize(32)
           .fontWeight(FontWeight.Normal)
-          .fontColor('#E5000000')
+          .fontColor(Ink.L1)
         Text(' kg')
           .fontSize(12)
-          .fontColor('#66000000')
+          .fontColor(Ink.L3)
           .margin({ left: 2, bottom: 4 })
       }
       .alignItems(VerticalAlign.Bottom)
@@ -66,7 +69,7 @@ struct CarbonCard {
 
       Text('今日减排 CO₂e')
         .fontSize(10)
-        .fontColor('#66000000')
+        .fontColor(Ink.L3)
         .width('100%')
 
       // 迷你 7 日趋势
@@ -75,7 +78,7 @@ struct CarbonCard {
           Column()
             .width(6)
             .height(`${h}%`)
-            .backgroundColor('#1F9A4E')
+            .backgroundColor(Brand.PRIMARY)
             .borderRadius(2)
             .margin({ right: 3 })
             .opacity(0.85)
@@ -87,22 +90,26 @@ struct CarbonCard {
       .margin({ top: 8 })
 
       Divider()
-        .color('#E8F3EC')
+        .color(Rule.HAIR)
         .margin({ top: 6, bottom: 6 })
+
+      // 大卡片（2*4 / 4*4）时，多出来的高度交给这块空白，
+      // 内容不会被拉散，也不会全部挤在顶部留下半屏空白。
+      Blank()
 
       // 底部：积分 + 提示
       Row() {
         Text(`${this.todayPoints}`)
           .fontSize(13)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#D98A00')
+          .fontColor(Seal.RED)
         Text(' 积分')
           .fontSize(10)
-          .fontColor('#66000000')
+          .fontColor(Ink.L3)
         Blank()
         Text(`累计 ${this.totalSaved} kg`)
           .fontSize(10)
-          .fontColor('#66000000')
+          .fontColor(Ink.L3)
       }
       .width('100%')
 
@@ -116,10 +123,11 @@ struct CarbonCard {
     }
     .width('100%')
     .height('100%')
-    // 官方《服务卡片设计规范》：2×2 卡片安全边距 12vp、圆角 18vp
+    // 官方《服务卡片设计规范》建议 2×2 卡片安全边距 12vp、圆角 18vp；
+    // 这里圆角跟 App 走 2（账本的方角），边距仍按官方 12vp。
     .padding(12)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(18)
+    .backgroundColor(Bg.PAGE)
+    .borderRadius(Radius.XS)
     .onClick(() => {
       // 点卡片直接进应用
       postCardAction(this, {

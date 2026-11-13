@@ -22,7 +22,7 @@
 import { CarbonRepository, POINTS_PER_KG } from '../data/CarbonRepository';
 import { ApiCode, ApiResult, Benefit, ExchangeOrder, PlatformAccount } from '../data/CarbonInclusiveApi';
 import { PointsEntry, today } from '../model/Models';
-import { CardTitle, HeroCard, RingStat, SectionCard } from './Common';
+import { CardTitle, HeroCard, SectionCard } from './Common';
 import {
   Bg, Brand, Edge, FontSize, Ink, LineHeight, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   shadowBrand, shadowSubtle

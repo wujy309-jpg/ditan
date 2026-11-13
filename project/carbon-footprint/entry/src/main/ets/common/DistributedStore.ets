@@ -453,6 +453,21 @@ export class DistributedStore {
     }
   }
 
+  /**
+   * 授权完成后重新订阅变更；返回是否订阅成功。
+   *
+   * 为什么需要这个入口：subscribeChange() 只在建库时跑一次，而系统权限是
+   * 运行时可变的 —— 用户启动时拒绝了「分布式数据同步」，之后去设置里手动打开，
+   * 若不再订阅一次，本进程会一直停在单机模式，直到杀掉进程重开。
+   */
+  retrySubscribe(): boolean {
+    if (this.changeSubscribed) {
+      return true;
+    }
+    this.subscribeChange();
+    return this.changeSubscribed;
+  }
+
   private async kvPut(key: string, value: string): Promise<void> {
     try {
       await this.kvStore.put(key, value);

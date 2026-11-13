@@ -97,63 +97,76 @@ async function loadModel(mgr: resourceManager.ResourceManager): Promise<mindSpor
 
 /**
  * PixelMap → 模型输入张量。
- * 流程：等比缩放到短边 256 → 中心裁剪 224×224 → 读 RGBA → 归一化为 Float32
+ * 流程：读源像素 → 等比缩放（短边 256）+ 中心裁剪 224×224（盒式平均）
+ *       → RGBA 取 RGB → 归一化为 Float32
  *
- * ⚠️ 必须在副本上做。scale() / crop() 是**原地变换**，直接在调用方传进来的
- * PixelMap 上执行会有两个后果：
- *   1. 识图页的预览图变成一张 224×224 的中心裁剪（用户看着像「放大了一角」）；
- *   2. LowCarbonClassifier 先跑视觉、再拿同一个 pm 跑 OCR，OCR 收到的就是裁剪图，
- *      文字被裁掉，识别质量崩掉。
- * 原先标定表为空、视觉通路没真正跑过，所以这个错误一直潜伏着。
+ * ⚠️ 为什么不用 pixelMap.scale() / crop()：
+ *   1. 它们是**原地变换**，会改掉调用方传进来的 PixelMap —— 预览图被裁成
+ *      224×224，且 LowCarbonClassifier 先跑视觉再拿同一个 pm 跑 OCR 时，
+ *      OCR 收到的是裁剪图，文字被裁掉、识别质量崩掉；
+ *   2. 官方推荐的副本写法 pixelMap.clone() 需要 API 18，本项目兼容
+ *      5.0.0(12)，真机上会直接抛错（构建期已报「API 18 才支持」警告）。
+ * 所以在 JS 侧自己做重采样：既不碰调用方对象，也不依赖高版本 API。
  */
 async function preprocess(pixelMap: image.PixelMap): Promise<ArrayBuffer> {
   const info: image.ImageInfo = await pixelMap.getImageInfo();
   const w: number = info.size.width;
   const h: number = info.size.height;
-
   if (w <= 0 || h <= 0) {
     throw new Error('invalid image size');
   }
 
-  const rgba: ArrayBuffer = new ArrayBuffer(INPUT_W * INPUT_H * 4);
-  const work: image.PixelMap = await pixelMap.clone();
-  try {
-    const scale: number = RESIZE_SHORT / Math.min(w, h);
-    await work.scale(scale, scale);
+  // 1. 读源图像素（RGBA_8888）。只读，不改变原图。
+  const srcBuf: ArrayBuffer = new ArrayBuffer(w * h * 4);
+  await pixelMap.readPixelsToBuffer(srcBuf);
+  const src: Uint8Array = new Uint8Array(srcBuf);
 
-    const after: image.ImageInfo = await work.getImageInfo();
-    const ax: number = Math.floor((after.size.width - INPUT_W) / 2);
-    const ay: number = Math.floor((after.size.height - INPUT_H) / 2);
-    await work.crop({
-      x: ax < 0 ? 0 : ax,
-      y: ay < 0 ? 0 : ay,
-      size: { width: INPUT_W, height: INPUT_H }
-    });
-
-    await work.readPixelsToBuffer(rgba);
-  } finally {
-    try {
-      await work.release();
-    } catch (e) {
-      hilog.warn(DOMAIN, TAG, 'release temp pixelmap failed');
-    }
-  }
-
-  const u8: Uint8Array = new Uint8Array(rgba);
+  // 2. 等比缩放到短边 RESIZE_SHORT，再中心裁剪成 INPUT_W × INPUT_H。
+  //    缩放与裁剪合成一次重采样：每个目标像素取源图上对应的矩形，求 RGB 均值。
+  const scale: number = RESIZE_SHORT / Math.min(w, h);
+  const scaledW: number = Math.max(INPUT_W, Math.round(w * scale));
+  const scaledH: number = Math.max(INPUT_H, Math.round(h * scale));
+  const offX: number = Math.floor((scaledW - INPUT_W) / 2);
+  const offY: number = Math.floor((scaledH - INPUT_H) / 2);
 
   const out: Float32Array = new Float32Array(INPUT_W * INPUT_H * 3);
   const bgr: boolean = CHANNEL_MODE === 'BGR';
   let o: number = 0;
-  for (let i = 0; i + 3 < u8.length; i += 4) {
-    const c0: number = u8[i];         // R（RGBA 缓冲区的第 0 个分量）
-    const c1: number = u8[i + 1];     // G
-    const c2: number = u8[i + 2];     // B
-    const r: number = bgr ? c2 : c0;
-    const b: number = bgr ? c0 : c2;
-    out[o] = (r / 255.0 - MEANS[0]) / STDS[0];
-    out[o + 1] = (c1 / 255.0 - MEANS[1]) / STDS[1];
-    out[o + 2] = (b / 255.0 - MEANS[2]) / STDS[2];
-    o += 3;
+
+  for (let y = 0; y < INPUT_H; y++) {
+    const sy0: number = Math.min(h - 1, Math.floor((offY + y) / scale));
+    const sy1: number = Math.min(h, Math.max(sy0 + 1, Math.floor((offY + y + 1) / scale)));
+    for (let x = 0; x < INPUT_W; x++) {
+      const sx0: number = Math.min(w - 1, Math.floor((offX + x) / scale));
+      const sx1: number = Math.min(w, Math.max(sx0 + 1, Math.floor((offX + x + 1) / scale)));
+
+      let sumR: number = 0;
+      let sumG: number = 0;
+      let sumB: number = 0;
+      let n: number = 0;
+      for (let yy = sy0; yy < sy1; yy++) {
+        const row: number = yy * w;
+        for (let xx = sx0; xx < sx1; xx++) {
+          const i: number = (row + xx) * 4;
+          sumR += src[i];
+          sumG += src[i + 1];
+          sumB += src[i + 2];
+          n++;
+        }
+      }
+      if (n === 0) {
+        n = 1;
+      }
+      const c0: number = sumR / n;   // R
+      const c1: number = sumG / n;   // G
+      const c2: number = sumB / n;   // B
+      const r: number = bgr ? c2 : c0;
+      const b: number = bgr ? c0 : c2;
+      out[o] = (r / 255.0 - MEANS[0]) / STDS[0];
+      out[o + 1] = (c1 / 255.0 - MEANS[1]) / STDS[1];
+      out[o + 2] = (b / 255.0 - MEANS[2]) / STDS[2];
+      o += 3;
+    }
   }
   return out.buffer;
 }

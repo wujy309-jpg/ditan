@@ -188,7 +188,3 @@ export function fuse(vision: AiSuggestion, ocr: AiSuggestion): AiSuggestion {
   return conflicted;
 }
 
-/** 按 factorId 反查是否在因子库中存在——避免标定表写错时把脏数据写进账本 */
-export function isKnownFactor(factorId: string, known: string[]): boolean {
-  return known.indexOf(factorId) >= 0;
-}

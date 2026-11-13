@@ -114,7 +114,7 @@ export class CarbonRepository {
     const store: DistributedStore = await DistributedStore.create(ctx, options);
     const repo: CarbonRepository = new CarbonRepository(store, ctx);
     CarbonRepository.inst = repo;
-    hilog.info(DOMAIN, TAG, 'repository ready, localDeviceId=%{public}s', store.getLocalDeviceId());
+    hilog.info(DOMAIN, TAG, 'repository ready, localDeviceId=%{private}s', store.getLocalDeviceId());
     return repo;
   }
 
@@ -406,6 +406,15 @@ export class CarbonRepository {
   /** 主动触发一次跨设备同步 */
   async syncNow(): Promise<SyncOutcome> {
     return await this.store.sync();
+  }
+
+  /**
+   * 授权后重新订阅变更；返回是否成功。
+   * 见 DistributedStore.retrySubscribe 的说明：订阅只在建库时建立一次，
+   * 权限被授予后必须重订阅，否则本次运行会一直是单机模式。
+   */
+  retrySubscribe(): boolean {
+    return this.store.retrySubscribe();
   }
 
   /** 同步状态快照，直接驱动同步状态面板 */

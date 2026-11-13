@@ -204,7 +204,7 @@ export class CarbonInclusiveApi {
       exchangedCount: 0
     };
     await this.store.putObject<PlatformAccount>(K_ACCOUNT, acc);
-    hilog.info(DOMAIN, TAG, 'account bound: %{public}s', acc.accountId);
+    hilog.info(DOMAIN, TAG, 'account bound: %{private}s', acc.accountId);
     const r: ApiResult = { code: ApiCode.OK, message: '绑定成功', orderId: '' };
     return r;
   }
@@ -241,7 +241,7 @@ export class CarbonInclusiveApi {
           message: '该笔积分已上报，未重复计入',
           orderId: ''
         };
-        hilog.info(DOMAIN, TAG, 'duplicate report ignored: %{public}s', requestId);
+        hilog.info(DOMAIN, TAG, 'duplicate report ignored: %{private}s', requestId);
         return dup;
       }
       acc.points += points;
