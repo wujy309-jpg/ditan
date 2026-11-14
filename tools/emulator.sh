@@ -37,7 +37,7 @@ EMU_DEVICE="${EMU_DEVICE:-phone}"
 EMU_OS="${EMU_OS:-HarmonyOS 7.0.0(26.0.0)}"
 
 if [ ! -x "$EMU" ]; then
-  echo "错误：找不到 Emulator（$EMU）" >&2
+  echo "错误：找不到 Emulator（${EMU}）" >&2
   exit 1
 fi
 
@@ -56,13 +56,13 @@ for d in dl:
     ;;
 
   install)
-    echo "开始下载镜像：$EMU_DEVICE / $EMU_OS（约 2.3 GB）"
+    echo "开始下载镜像：$EMU_DEVICE / ${EMU_OS}（约 2.3 GB）"
     "$EMU" -license accept >/dev/null 2>&1 || true
     "$EMU" -install -deviceType "$EMU_DEVICE" -osVersion "$EMU_OS" -force
     ;;
 
   create)
-    echo "创建实例：$EMU_NAME（$EMU_DEVICE / $EMU_OS）"
+    echo "创建实例：${EMU_NAME}（$EMU_DEVICE / ${EMU_OS}）"
     "$EMU" -create "$EMU_NAME" -deviceType "$EMU_DEVICE" -osVersion "$EMU_OS" -force 2>&1 || true
     "$EMU" -list -details || true
     ;;

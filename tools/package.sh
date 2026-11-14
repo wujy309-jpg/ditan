@@ -98,7 +98,7 @@ for f in "${REQUIRED_FILES[@]}"; do
       missing=1
       continue
     fi
-    echo "  已加入视频：$f（${size_mb}MB）"
+    echo "  已加入视频：${f}（${size_mb}MB）"
   fi
   cp "$DELIV/$f" "$STAGE/"
 done

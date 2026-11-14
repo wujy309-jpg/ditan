@@ -43,7 +43,7 @@ else
   STALE=$(ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=8 $SERVER \
     "ss -lntp 2>/dev/null | grep 127.0.0.1:8899 | grep -oE 'pid=[0-9]+' | cut -d= -f2" 2>/dev/null)
   if [ -n "$STALE" ]; then
-    say "   发现僵尸 sshd（pid $STALE）→ 清理"
+    say "   发现僵尸 sshd（pid ${STALE}）→ 清理"
     ssh -p $SSH_PORT -o StrictHostKeyChecking=no $SERVER "kill $STALE" 2>/dev/null
     sleep 2
   fi
@@ -56,12 +56,12 @@ for i in $(seq 1 20); do
   if [ "$C" = "200" ]; then say "   公网已恢复 (HTTP 200)"; OK=1; break; fi
   sleep 2
 done
-[ "${OK:-0}" = "1" ] || { say "   仍未恢复（最后状态 $C）—— 跑 tools/remote/doctor.sh 看细节"; exit 1; }
+[ "${OK:-0}" = "1" ] || { say "   仍未恢复（最后状态 ${C}）—— 跑 tools/remote/doctor.sh 看细节"; exit 1; }
 
 say "④ 模拟器状态…"
 HDC="/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc"
 T=$("$HDC" list targets 2>/dev/null | tr -d '\r' | head -1)
-if [ -n "$T" ] && [ "$T" != "[Empty]" ]; then say "   在线（$T）"
+if [ -n "$T" ] && [ "$T" != "[Empty]" ]; then say "   在线（${T}）"
 else say "   ⚠️ 离线 —— 执行：tools/emulator.sh start && tools/emulator.sh wait"; fi
 
 echo ""
