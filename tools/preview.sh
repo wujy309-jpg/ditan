@@ -52,10 +52,18 @@ sync_src() {
   (cd "$SRC" && tar cf - --exclude=build --exclude=.hvigor --exclude=oh_modules --exclude=signing .) \
     | (cd "$BUILD_DIR" && tar xf -)
   # oh_modules / signing / .hvigor 只复制一次（它们体积大且不随源码变化）
+  # 按优先级找：先 ~/DevEcoStudioProjects（老环境），再工程自身（新克隆的机器）
+  # ⚠️ 新机器上 REF_DIR 不存在，必须回退到 $SRC，否则构建目录缺依赖，
+  #    表现为一堆 arkts-no-any-unknown 报错（类型解析不出来），很容易误判成代码问题。
   for d in oh_modules signing .hvigor; do
-    if [ ! -e "$BUILD_DIR/$d" ] && [ -e "$REF_DIR/$d" ]; then
-      echo "同步 $d …"
-      cp -R "$REF_DIR/$d" "$BUILD_DIR/$d"
+    if [ ! -e "$BUILD_DIR/$d" ]; then
+      if [ -e "$REF_DIR/$d" ]; then
+        echo "同步 $d（来自 $REF_DIR）…"
+        cp -R "$REF_DIR/$d" "$BUILD_DIR/$d"
+      elif [ -e "$SRC/$d" ]; then
+        echo "同步 $d（来自工程自身）…"
+        cp -R "$SRC/$d" "$BUILD_DIR/$d"
+      fi
     fi
   done
 }
