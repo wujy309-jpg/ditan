@@ -190,6 +190,42 @@ export async function pickFromPhonePhoto(
 }
 
 // ---------------------------------------------------------------------------
+// 内置示例照片（评委演示用，明确标注，不偷偷替换）
+// ---------------------------------------------------------------------------
+
+/** 随包内置的示例照片：一张真实拍摄的共享单车 */
+export const DEMO_PHOTO: string = 'demo-bike.jpg';
+
+/** 读内置示例照片 —— 相册空、摄像头不方便时，评委也能看到完整效果 */
+export async function loadDemoPhoto(
+  mgr: resourceManager.ResourceManager
+): Promise<image.PixelMap | undefined> {
+  let source: image.ImageSource | undefined = undefined;
+  try {
+    const bytes: Uint8Array = await mgr.getRawFileContent(DEMO_PHOTO);
+    // Uint8Array 可能只是更大 buffer 的视图，必须按 byteOffset/length 切片
+    const buf: ArrayBuffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    );
+    source = image.createImageSource(buf);
+    const pixelMap: image.PixelMap = await source.createPixelMap();
+    return pixelMap;
+  } catch (e) {
+    hilog.warn(DOMAIN, TAG, 'loadDemoPhoto failed: %{public}s', JSON.stringify(e));
+    return undefined;
+  } finally {
+    if (source !== undefined) {
+      try {
+        await source.release();
+      } catch (e) {
+        hilog.warn(DOMAIN, TAG, 'release demo image source failed');
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 识别
 // ---------------------------------------------------------------------------
 

@@ -17,6 +17,7 @@ import {
   pickFromGallery,
   pickFromPhonePhoto,
   releaseOcr,
+  loadDemoPhoto,
   WEBCAM_CAPTURE_URL
 } from '../ai/LowCarbonClassifier';
 import {
@@ -200,6 +201,41 @@ export struct EntryPage {
     }
   }
 
+  /**
+   * 内置示例照片 → 端侧识别（评委演示用）。
+   *
+   * 为什么要有这个：评委现场不一定有自行车可拍，摄像头上只有人。
+   * 与其让演示失败，不如给一个**明确标注为示例**的入口，
+   * 让评委看到完整的「识别 → 预填」体验，同时不隐瞒这是示例图。
+   */
+  private async doAiRecognizeFromDemo(): Promise<void> {
+    if (this.aiBusy) {
+      return;
+    }
+    this.aiBusy = true;
+    this.aiReason = '正在识别示例照片…';
+    this.aiApplied = false;
+    try {
+      const rawCtx = this.getUIContext().getHostContext();
+      if (rawCtx === undefined) {
+        this.aiReason = '拿不到应用上下文';
+        return;
+      }
+      const ctx: common.Context = rawCtx as common.Context;
+      const mgr: resourceManager.ResourceManager = ctx.getApplicationContext().resourceManager;
+      const pm: image.PixelMap | undefined = await loadDemoPhoto(mgr);
+      if (pm === undefined) {
+        this.aiReason = '示例照片加载失败';
+        return;
+      }
+      await this.recognizePixelMap(pm);
+    } catch (e) {
+      this.aiReason = '示例识别失败，请手动选择';
+    } finally {
+      this.aiBusy = false;
+    }
+  }
+
   /** 统一的识别 + 预填后处理（相册、手机取图、电脑拍照共用一条管线） */
   private async recognizePixelMap(pm: image.PixelMap): Promise<void> {
     this.aiPreview = pm;
@@ -220,6 +256,13 @@ export struct EntryPage {
       parts.push(detail.note);
     }
     this.aiReason = parts.join('　·　');
+
+    // 没识别出东西时给一句下一步，别让演示停在这里
+    if (detail.suggestion.factorId.length === 0) {
+      this.aiReason = this.aiReason.length > 0
+        ? `${this.aiReason}　·　可点「示 例 照 片」看完整效果`
+        : '没识别出低碳行为　·　可点「示 例 照 片」看完整效果';
+    }
 
     // 关键产品设计：只有高置信且因子存在时才预填
     if (detail.suggestion.confidence >= 0.5 && detail.suggestion.factorId.length > 0) {
@@ -631,6 +674,32 @@ export struct EntryPage {
             .onClick(() => {
               if (!this.aiBusy) {
                 this.doAiRecognizeFromWebcam();
+              }
+            })
+
+            // 演示入口：内置一张真实拍摄的共享单车照片，评委随时能看到完整效果
+            Row() {
+              Text('示 例 照 片')
+                .fontSize(13)
+                .letterSpacing(2)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L3)
+              Text('（演示用）')
+                .fontSize(10)
+                .fontColor(Ink.L4)
+                .margin({ left: 6 })
+              Blank()
+              Text('◆')
+                .fontSize(12)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L3)
+            }
+            .width('100%')
+            .height(40)
+            .padding({ left: 14, right: 14 })
+            .border({ width: 1, color: Rule.HAIR, radius: Radius.XS })
+            .margin({ top: 8 })
+            .onClick(() => {
+              if (!this.aiBusy) {
+                this.doAiRecognizeFromDemo();
               }
             })
 
