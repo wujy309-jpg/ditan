@@ -11,7 +11,13 @@
  */
 import { CarbonRepository } from '../data/CarbonRepository';
 import { factorById, factorsOf } from '../data/FactorLibrary';
-import { classify, ClassifyDetail, pickFromGallery, releaseOcr } from '../ai/LowCarbonClassifier';
+import {
+  classify,
+  ClassifyDetail,
+  pickFromGallery,
+  pickFromPhonePhoto,
+  releaseOcr
+} from '../ai/LowCarbonClassifier';
 import {
   Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   Motion, buttonGradient, shadowCard, shadowRaised
@@ -73,6 +79,13 @@ function noShadow(): ShadowOptions {
 export struct EntryPage {
   /** 数据版本号，页签切换时由 Index 递增，用于刷新（原因见 SmartService 注释） */
   @Prop @Watch('onVersion') version: number = 0;
+  /**
+   * 打开「碳迹记录」明细页。
+   * 明细是整屏二级页（在 Index 里覆盖），本页只保留 3 条最近记录 + 一个行内入口。
+   * 这样录入页的节奏是固定的五段，不会每加一个功能就在保存按钮下面再垒一层。
+   */
+  onOpenRecords: (cat: string) => void = () => {
+  };
 
   @State category: string = Category.TRAVEL;
   @State factorId: string = '';
@@ -81,8 +94,8 @@ export struct EntryPage {
   @State hint: string = '';
   @State hintOk: boolean = true;
   @State recent: BehaviorRecord[] = [];
-  /** 记录总条数。不能拿 recent.length 充数 —— recent 被 slice(0,5) 截断过，
-   *  一旦记录超过 5 条，刊头就会永远显示「共 5 条」，与看板页的条数打架。 */
+  /** 记录总条数。不能拿 recent.length 充数 —— recent 被截断过，
+   *  一旦记录超过 3 条，刊头就会永远显示「共 3 条」，与看板页的条数打架。 */
   @State count: number = 0;
   @State total: number = 0;
   @State todayTotal: number = 0;
@@ -108,7 +121,7 @@ export struct EntryPage {
     releaseOcr();
   }
 
-  /** 拍照/选图 → 端侧识别 → 高置信才预填，低置信交给用户确认 */
+  /** 拍照/选图（系统相册）→ 端侧识别 */
   private async doAiRecognize(): Promise<void> {
     if (this.aiBusy) {
       return;
@@ -122,38 +135,72 @@ export struct EntryPage {
         this.aiReason = '';
         return;
       }
-      this.aiPreview = pm;
-
-      const rawCtx = this.getUIContext().getHostContext();
-      if (rawCtx === undefined) {
-        this.aiReason = '拿不到应用上下文';
-        return;
-      }
-      const ctx: common.Context = rawCtx as common.Context;
-      const appCtx: common.ApplicationContext = ctx.getApplicationContext();
-      const mgr: resourceManager.ResourceManager = appCtx.resourceManager;
-
-      const detail: ClassifyDetail = await classify(mgr, pm);
-      this.aiConfidence = detail.suggestion.confidence;
-      const parts: string[] = [detail.suggestion.reason];
-      if (detail.note.length > 0) {
-        parts.push(detail.note);
-      }
-      this.aiReason = parts.join('　·　');
-
-      // 关键产品设计：只有高置信且因子存在时才预填
-      if (detail.suggestion.confidence >= 0.5 && detail.suggestion.factorId.length > 0) {
-        const f: Factor | undefined = factorById(detail.suggestion.factorId);
-        if (f !== undefined) {
-          this.category = f.category;
-          this.factorId = f.id;
-          this.aiApplied = true;
-        }
-      }
+      await this.recognizePixelMap(pm);
     } catch (e) {
       this.aiReason = '识别失败，请手动选择';
     } finally {
       this.aiBusy = false;
+    }
+  }
+
+  /**
+   * 手机取图 → 端侧识别。
+   *
+   * 模拟器没有相机应用（com.huawei.hmos.camera 不存在），
+   * 所以「拍照」这一步交给手机：手机在局域网页面里拍，
+   * 电脑把照片推到本机固定路径，这里只做一次**本地文件读取**再推理。
+   * 图片不经过网络、不上传，仍然是端侧推理。
+   */
+  private async doAiRecognizeFromPhone(): Promise<void> {
+    if (this.aiBusy) {
+      return;
+    }
+    this.aiBusy = true;
+    this.aiReason = '正在读取手机照片…';
+    this.aiApplied = false;
+    try {
+      const pm: image.PixelMap | undefined = await pickFromPhonePhoto();
+      if (pm === undefined) {
+        this.aiReason = '还没收到手机照片 —— 先在手机上的远程页面拍照送达';
+        return;
+      }
+      await this.recognizePixelMap(pm);
+    } catch (e) {
+      this.aiReason = '手机照片识别失败，请手动选择';
+    } finally {
+      this.aiBusy = false;
+    }
+  }
+
+  /** 统一的识别 + 预填后处理（相册、手机取图共用一条管线） */
+  private async recognizePixelMap(pm: image.PixelMap): Promise<void> {
+    this.aiPreview = pm;
+
+    const rawCtx = this.getUIContext().getHostContext();
+    if (rawCtx === undefined) {
+      this.aiReason = '拿不到应用上下文';
+      return;
+    }
+    const ctx: common.Context = rawCtx as common.Context;
+    const appCtx: common.ApplicationContext = ctx.getApplicationContext();
+    const mgr: resourceManager.ResourceManager = appCtx.resourceManager;
+
+    const detail: ClassifyDetail = await classify(mgr, pm);
+    this.aiConfidence = detail.suggestion.confidence;
+    const parts: string[] = [detail.suggestion.reason];
+    if (detail.note.length > 0) {
+      parts.push(detail.note);
+    }
+    this.aiReason = parts.join('　·　');
+
+    // 关键产品设计：只有高置信且因子存在时才预填
+    if (detail.suggestion.confidence >= 0.5 && detail.suggestion.factorId.length > 0) {
+      const f: Factor | undefined = factorById(detail.suggestion.factorId);
+      if (f !== undefined) {
+        this.category = f.category;
+        this.factorId = f.id;
+        this.aiApplied = true;
+      }
     }
   }
 
@@ -224,7 +271,8 @@ export struct EntryPage {
       return;
     }
     const list: BehaviorRecord[] = await repo.listBehaviors();
-    this.recent = list.slice(0, 5);
+    // 只留 3 条：本页是「录入」，不是「翻阅」。全量明细在 RecordsPage。
+    this.recent = list.slice(0, 3);
     this.count = list.length;
     this.total = await repo.totalSaved();
 
@@ -478,7 +526,7 @@ export struct EntryPage {
           Column() {
             this.secHead('02', '端 侧 识 图')
 
-            Text('拍一张照片或从相册选图，应用在本机识别低碳行为并自动预填，图片不会上传。')
+            Text('从相册选图，或用手机拍照送进来 —— 应用在本机识别低碳行为并自动预填，图片不会上传。')
               .fontSize(12)
               .fontColor(Ink.L3)
               .lineHeight(19)
@@ -511,6 +559,28 @@ export struct EntryPage {
             .onClick(() => {
               if (!this.aiBusy) {
                 this.doAiRecognize();
+              }
+            })
+
+            // 模拟器没有相机应用：拍照这一步交给手机，照片由电脑推到本机后本地读取
+            Row() {
+              Text('手 机 取 图')
+                .fontSize(13)
+                .letterSpacing(2)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L2)
+              Blank()
+              Text('⇢')
+                .fontSize(14)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L2)
+            }
+            .width('100%')
+            .height(44)
+            .padding({ left: 14, right: 14 })
+            .border({ width: 1, color: this.aiBusy ? Rule.HAIR : Rule.HAIR, radius: Radius.XS })
+            .margin({ top: 8 })
+            .onClick(() => {
+              if (!this.aiBusy) {
+                this.doAiRecognizeFromPhone();
               }
             })
 
@@ -766,9 +836,44 @@ export struct EntryPage {
           }
 
           // ===== 最近记录 =====
-          if (this.recent.length > 0) {
+          // 只露 3 条 + 一个行内入口『全部 ›』。
+          // 筛选与全量列表都搬去了独立的 RecordsPage —— 录入页保持「抬头 + 01~05 + 保存」
+          // 这条固定节奏，不再往保存按钮下面一层层加功能。
+          if (this.count > 0) {
             Column() {
-              this.secHead('06', '最 近 记 录')
+              Row() {
+                Text('06')
+                  .fontFamily(Serif.FAMILY)
+                  .fontSize(10)
+                  .fontColor(Seal.RED)
+                  .letterSpacing(1)
+                  .width(24)
+                Text('最 近 记 录')
+                  .fontFamily(Serif.FAMILY)
+                  .fontSize(15)
+                  .fontColor(Ink.L1)
+                  .letterSpacing(2)
+                Text(`共 ${this.count} 条`)
+                  .fontSize(9)
+                  .fontColor(Ink.L4)
+                  .fontFeature('"tnum" 1')
+                  .margin({ left: 8 })
+                  .layoutWeight(1)
+                Text('全部 ›')
+                  .fontSize(10)
+                  .fontColor(Ink.L3)
+                  .letterSpacing(0.5)
+                  .padding({ left: 8, top: 4, bottom: 4 })
+                  .onClick(() => {
+                    this.onOpenRecords('');
+                  })
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .margin({ bottom: 7 })
+
+              Column().width('100%').height(1).backgroundColor(Rule.STRONG)
+              Column().width('100%').height(1).backgroundColor(Rule.HAIR).margin({ top: 2, bottom: 12 })
 
               ForEach(this.recent, (r: BehaviorRecord) => {
                 Row() {

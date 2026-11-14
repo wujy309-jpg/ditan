@@ -62,3 +62,11 @@ tools/rar/
 
 # 编译验证用的 ASCII 副本（tools/build 或本地 hvigor 试验产生，勿提交）
 /.build/
+
+# ---- PPT 构建工作区（ppt-master / tools/docs 的中间产物，可重跑生成）----
+# projects/<deck>/ 下有 _qa 渲染图、backup、exports 等，单次数十 MB；
+# 最终成品放 交付物/，这里不入库。
+projects/
+_archive/
+_ppt_build/
+_assets_raw/

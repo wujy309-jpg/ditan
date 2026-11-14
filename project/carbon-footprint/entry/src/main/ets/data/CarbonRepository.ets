@@ -47,6 +47,8 @@ const PREFIX: string = 'carbon:';
 const K_BEHAVIOR: string = 'behavior:';
 const K_POINTS: string = 'points:';
 const K_PROFILE: string = 'profile';
+/** 已兑换奖励的归属态（徽章 / 证书），存一个 id 数组 */
+const K_OWNED: string = 'owned:rewards';
 
 /** 积分规则：每减排 1 kg CO₂e 得 100 积分 */
 export const POINTS_PER_KG: number = 100;
@@ -315,6 +317,41 @@ export class CarbonRepository {
 
   async saveProfile(p: Profile): Promise<void> {
     await this.store.putObject<Profile>(K_PROFILE, p);
+  }
+
+  // ------------------------------------------------------------------
+  // 虚拟奖励的归属状态（徽章 / 证书）
+  // ------------------------------------------------------------------
+
+  /**
+   * 已兑换过的奖励 id。
+   *
+   * 为什么需要：reward 原来是纯粹的「花分」操作 —— 兑换完只多一条积分流水，
+   * 屏幕上什么也不多，还能反复兑换同一张证书。赛题要求的是「兑换虚拟低碳徽章、
+   * 植树证书等奖励」，奖励得有归属态，否则演示时点了看不到东西。
+   * 存一个字符串数组，与行为记录一样落在同一个分布式 KV 里，多设备同步时天然一致。
+   */
+  async listOwned(): Promise<string[]> {
+    const raw: string | undefined = await this.store.get(K_OWNED);
+    if (raw === undefined || raw.length === 0) {
+      return [];
+    }
+    try {
+      const arr: string[] = JSON.parse(raw) as string[];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /** 记下一条奖励归属；重复调用不会产生重复项 */
+  async markOwned(id: string): Promise<void> {
+    const list: string[] = await this.listOwned();
+    if (list.indexOf(id) >= 0) {
+      return;
+    }
+    list.push(id);
+    await this.store.put(K_OWNED, JSON.stringify(list));
   }
 
   // ------------------------------------------------------------------

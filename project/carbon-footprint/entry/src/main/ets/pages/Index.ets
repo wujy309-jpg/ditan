@@ -21,6 +21,7 @@ import { EntryPage } from '../view/EntryPage';
 import { KnowledgePage } from '../view/KnowledgePage';
 import { PointsPage } from '../view/PointsPage';
 import { ProfilePage } from '../view/ProfilePage';
+import { RecordsPage } from '../view/RecordsPage';
 import { YearReportPage } from '../view/YearReportPage';
 
 const DOMAIN: number = 0x0001;
@@ -49,6 +50,26 @@ struct Index {
    * 也避免了为它引入 Navigation / bindContentCover 那套路由。
    */
   @State showYearReport: boolean = false;
+
+  /**
+   * 「低碳记录」明细页是否展开，以及进入时预选的类目。
+   *
+   * 为什么是独立一层覆盖、而不是第六个页签：
+   *   页签栏五个已经到上限，而「翻旧账」是低频动作。
+   *   为什么不做成某个页面里的一块卡片：
+   *   记录查询要能查全量、能删，塞进录入页尾部就是「底部无限加功能」。
+   * 入口只有两个：记一笔页的『全部 ›』、看板页分类占比的任意一行。
+   */
+  @State showRecords: boolean = false;
+  @State recordFilter: string = '';
+
+  /** 打开记录明细（cat 为空表示全部） */
+  private openRecords(cat: string): void {
+    this.recordFilter = cat;
+    animateTo(Motion.SMOOTH, () => {
+      this.showRecords = true;
+    });
+  }
 
   /**
    * 自定义页签项：图标 + 文字，选中时一起落进一个 Brand.SOFT 胶囊指示器。
@@ -148,7 +169,12 @@ struct Index {
         Stack() {
         Tabs({ barPosition: BarPosition.End, controller: this.controller }) {
           TabContent() {
-            EntryPage({ version: this.dataVersion })
+            EntryPage({
+              version: this.dataVersion,
+              onOpenRecords: (cat: string) => {
+                this.openRecords(cat);
+              }
+            })
           }.tabBar(this.tabItem(0, $r('app.media.ic_tab_add'), '记一笔'))
 
           TabContent() {
@@ -158,6 +184,9 @@ struct Index {
                 animateTo(Motion.SMOOTH, () => {
                   this.showYearReport = true;
                 });
+              },
+              onOpenRecords: (cat: string) => {
+                this.openRecords(cat);
               }
             })
           }.tabBar(this.tabItem(1, $r('app.media.ic_tab_chart'), '看板'))
@@ -198,6 +227,19 @@ struct Index {
             onClose: () => {
               animateTo(Motion.SMOOTH, () => {
                 this.showYearReport = false;
+              });
+            }
+          })
+        }
+
+        // 记录明细：同样是整屏覆盖，压在页签栏之上。
+        if (this.showRecords) {
+          RecordsPage({
+            version: this.dataVersion,
+            initialCategory: this.recordFilter,
+            onClose: () => {
+              animateTo(Motion.SMOOTH, () => {
+                this.showRecords = false;
               });
             }
           })

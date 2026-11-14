@@ -1,0 +1,47 @@
+[Script Info]
+Title: 碳迹 · 功能演示
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Ledger,Songti SC,50,&H001C2226,&H000000FF,&H00F0F7FA,&H00000000,0,0,0,0,100,100,0.5,0,1,2.5,0,1,100,900,96,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.41,0:00:05.96,Ledger,,0,0,0,,从记一笔，走到记录、看板、\N积分、科普，还有我的。
+Dialogue: 0,0:00:06.96,0:00:07.77,Ledger,,0,0,0,,先记一笔。
+Dialogue: 0,0:00:08.20,0:00:12.99,Ledger,,0,0,0,,四个类目，十四种行为，\N都摆在这一页里。
+Dialogue: 0,0:00:14.27,0:00:18.13,Ledger,,0,0,0,,点出行，选步行，填六公里。
+Dialogue: 0,0:00:19.33,0:00:23.94,Ledger,,0,0,0,,减排量跟着就跳出来了，一点一七公斤。
+Dialogue: 0,0:00:24.97,0:00:28.76,Ledger,,0,0,0,,点保存，这笔账立刻进了最近的记录。
+Dialogue: 0,0:00:29.98,0:00:32.98,Ledger,,0,0,0,,页尾只留三条，右边一个「全部」。
+Dialogue: 0,0:00:33.99,0:00:37.29,Ledger,,0,0,0,,每条因子后面，都跟着它的基准和出处。
+Dialogue: 0,0:00:38.13,0:00:40.47,Ledger,,0,0,0,,点「全部」，进记录页。
+Dialogue: 0,0:00:41.43,0:00:45.41,Ledger,,0,0,0,,上面是五等分页签：全部，加四类。
+Dialogue: 0,0:00:46.51,0:00:50.55,Ledger,,0,0,0,,切到出行，条数和合计一起变。
+Dialogue: 0,0:00:51.45,0:00:53.96,Ledger,,0,0,0,,删掉一条，合计马上跟着减。
+Dialogue: 0,0:00:55.21,0:00:56.98,Ledger,,0,0,0,,返回，往看板走。
+Dialogue: 0,0:00:58.17,0:01:00.88,Ledger,,0,0,0,,这棵树跟着累计减排一起长。
+Dialogue: 0,0:01:01.99,0:01:05.82,Ledger,,0,0,0,,十二周日历记着连续天数。
+Dialogue: 0,0:01:06.98,0:01:12.03,Ledger,,0,0,0,,统计粒度收成了一行：日、周、月、年。
+Dialogue: 0,0:01:13.30,0:01:15.48,Ledger,,0,0,0,,切哪一档，三张图一起动。
+Dialogue: 0,0:01:16.50,0:01:21.63,Ledger,,0,0,0,,再往下，是今日任务、低碳建议，\N和一张减排凭证。
+Dialogue: 0,0:01:23.17,0:01:25.03,Ledger,,0,0,0,,分类占比的每一行都能点。
+Dialogue: 0,0:01:26.04,0:01:28.78,Ledger,,0,0,0,,点出行，就带着类目回到记录页。
+Dialogue: 0,0:01:29.87,0:01:31.12,Ledger,,0,0,0,,积分先看余额。
+Dialogue: 0,0:01:32.17,0:01:35.87,Ledger,,0,0,0,,徽章和证书合成了一张卡：\N可兑换，已获得。
+Dialogue: 0,0:01:37.11,0:01:40.84,Ledger,,0,0,0,,换到的植树证书，印成一张票面。
+Dialogue: 0,0:01:41.86,0:01:43.85,Ledger,,0,0,0,,累计减排写得清清楚楚。
+Dialogue: 0,0:01:44.81,0:01:47.39,Ledger,,0,0,0,,科普是八篇短文，收成一页。
+Dialogue: 0,0:01:48.21,0:01:49.87,Ledger,,0,0,0,,点一行，就地展开。
+Dialogue: 0,0:01:51.00,0:01:54.23,Ledger,,0,0,0,,我的里面三件事：
+Dialogue: 0,0:01:54.84,0:02:01.38,Ledger,,0,0,0,,同步面板、AI 自检，\N还有 JSON 备份和 CSV 导出。
+Dialogue: 0,0:02:03.35,0:02:04.78,Ledger,,0,0,0,,最后是年度报告。
+Dialogue: 0,0:02:05.57,0:02:07.62,Ledger,,0,0,0,,记了多少条、活跃多少天，
+Dialogue: 0,0:02:08.40,0:02:11.24,Ledger,,0,0,0,,主力哪一类，还有全年积分。
+Dialogue: 0,0:02:11.80,0:02:13.72,Ledger,,0,0,0,,这些数据，全都留在本机。
+Dialogue: 0,0:02:14.31,0:02:15.96,Ledger,,0,0,0,,不上云，断网也能用。

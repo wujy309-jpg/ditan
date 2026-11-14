@@ -78,6 +78,17 @@ export struct PointsPage {
   // 本地积分
   @State balance: number = 0;
   @State ledger: PointsEntry[] = [];
+  /** 已兑换的奖励 id（徽章 / 证书都有归属态，不会被重复扣分） */
+  @State owned: string[] = [];
+  /** 证书上要印的信息 */
+  @State holderName: string = '低碳生活家';
+  @State totalSaved: number = 0;
+  /**
+   * 「徽章与证书」卡内的分段：0 = 可兑换，1 = 已获得。
+   * 为什么用分段而不是两张卡：兑换列表与已获得列表是同一件事的两个视角，
+   * 拆成两张卡等于把积分页往下拉长一屏，底部越垒越长。
+   */
+  @State seg: number = 0;
 
   // 碳普惠平台（创新点 3）
   @State bound: boolean = false;
@@ -106,6 +117,10 @@ export struct PointsPage {
     }
     this.balance = await repo.pointsBalance();
     this.ledger = (await repo.listPoints()).slice(0, 10);
+    this.owned = await repo.listOwned();
+    const prof = await repo.getProfile();
+    this.holderName = prof.nickname.length > 0 ? prof.nickname : '低碳生活家';
+    this.totalSaved = await repo.totalSaved();
 
     const api = repo.platform();
     const acc: PlatformAccount = await api.getAccount();
@@ -125,6 +140,17 @@ export struct PointsPage {
 
   // ---------------- 本地奖励兑换 ----------------
 
+  /** 已拥有的奖励（按 REWARDS 顺序，徽章与证书都在内） */
+  private ownedItems(): Reward[] {
+    const out: Reward[] = [];
+    for (let i = 0; i < REWARDS.length; i++) {
+      if (this.owned.indexOf(REWARDS[i].id) >= 0) {
+        out.push(REWARDS[i]);
+      }
+    }
+    return out;
+  }
+
   private async redeemLocal(r: Reward): Promise<void> {
     const repo: CarbonRepository | undefined = CarbonRepository.get();
     if (repo === undefined) {
@@ -133,6 +159,11 @@ export struct PointsPage {
     // 连点保护：busy 是同步置位的，第二次点击进不来。
     // 原先这里没有任何保护，快速双击会用同一份旧余额扣两次。
     if (this.busy) {
+      return;
+    }
+    // 归属态去重：徽章与证书都是一次性奖励，已拥有就不再扣分
+    if (this.owned.indexOf(r.id) >= 0) {
+      this.say(true, `「${r.name}」已经在你的名下`);
       return;
     }
     if (this.balance < r.cost) {
@@ -146,6 +177,7 @@ export struct PointsPage {
       if (entry.delta === 0) {
         this.say(false, '积分不足，兑换未完成');
       } else {
+        await repo.markOwned(r.id);
         this.say(true, `兑换成功：${r.name}`);
       }
     } finally {
@@ -696,73 +728,245 @@ export struct PointsPage {
               .margin({ top: Space.MD })
           }
 
-          // ============ 主要功能 3：本地虚拟奖励 ============
+          // ============ 主要功能 3：徽章与证书（一张卡，卡内切换） ============
+          // 原来这里是两张卡：先「我的证书」，再「低碳徽章与证书」。
+          // 兑换列表与已获得列表本来就是同一件事的两个视角 —— 拆成两张卡，
+          // 等于每加一个能力就在积分页底部再垒一层。合并成一张卡内分段后，
+          // 页面少了一整屏，也把「积分 → 兑换 → 拥有」串成了一条线。
           SectionCard({
-            title: '低碳徽章与证书',
+            title: '徽 章 与 证 书',
             icon: $r('app.media.ic_leaf'),
-            showIcon: true
+            showIcon: true,
+            badge: `已获得 ${this.owned.length} / ${REWARDS.length}`
           }) {
-            ForEach(REWARDS, (r: Reward) => {
-              Row() {
-                Column() {
-                  Image(this.rewardIcon(r))
-                    .width(20)
-                    .height(20)
-                    .fillColor(this.balance >= r.cost ? Brand.PRIMARY : Ink.L4)
-                    .objectFit(ImageFit.Contain)
-                }
-                .width(40)
-                .height(40)
-                .borderRadius(Radius.SM)
-                .backgroundColor(this.balance >= r.cost ? this.rewardSoft(r) : Bg.SUBTLE)
-                .justifyContent(FlexAlign.Center)
-                .alignItems(HorizontalAlign.Center)
-                .margin({ right: Space.MD })
-
-                Column() {
-                  Text(r.name)
-                    .fontSize(FontSize.BODY_M)
-                    .fontWeight(Weight.SUBTITLE)
-                    .fontColor(this.balance >= r.cost ? Ink.L1 : Ink.L3)
-                    .maxLines(1)
-                  Text(r.desc)
-                    .fontSize(FontSize.CAPTION)
-                    .fontColor(this.balance >= r.cost ? Ink.L3 : Ink.L4)
-                    .maxLines(1)
-                    .margin({ top: 3 })
-                }
-                .alignItems(HorizontalAlign.Start)
-                .layoutWeight(1)
-
-                Column() {
-                  Text(`${r.cost} 分`)
-                    .fontSize(FontSize.BODY_S)
-                    .fontWeight(Weight.SUBTITLE)
-                    .fontColor(this.balance >= r.cost ? Semantic.ALERT : Ink.L4)
-                  Button('兑换', { type: ButtonType.Normal })
-                    .fontSize(FontSize.BODY_S)
-                    .height(32)
-                    .padding({ left: 14, right: 14 })
-                    .borderRadius(Radius.XS)
-                    .backgroundColor(this.balance >= r.cost ? Brand.PRIMARY : Bg.SUBTLE)
-                    .fontColor(this.balance >= r.cost ? Ink.ON_BRAND : Ink.L3)
-                    .margin({ top: 6 })
-                    .onClick(() => {
-                      this.redeemLocal(r);
-                    })
-                }
-                .alignItems(HorizontalAlign.End)
-                .margin({ left: Space.SM })
+            Row() {
+              Column() {
+                Text(`可 兑 换`)
+                  .fontSize(FontSize.BODY_S)
+                  .fontColor(this.seg === 0 ? Ink.L1 : Ink.L4)
+                  .fontWeight(this.seg === 0 ? Weight.SUBTITLE : Weight.BODY)
+                  .letterSpacing(1)
+                Column()
+                  .width(14)
+                  .height(2)
+                  .backgroundColor(this.seg === 0 ? Seal.RED : Color.Transparent)
+                  .margin({ top: 5 })
               }
-              .width('100%')
-              .padding(Space.MD)
-              .backgroundColor(Bg.CARD)
-              .borderRadius(Radius.MD)
-              .border({ width: 1, color: Edge.HAIR })
-              .shadow(shadowSubtle())
-              .margin({ bottom: Space.SM })
-              .alignItems(VerticalAlign.Center)
-            }, (r: Reward) => r.id)
+              .layoutWeight(1)
+              .padding({ top: 4, bottom: 2 })
+              .onClick(() => {
+                this.seg = 0;
+              })
+
+              Column() {
+                Text('已 获 得')
+                  .fontSize(FontSize.BODY_S)
+                  .fontColor(this.seg === 1 ? Ink.L1 : Ink.L4)
+                  .fontWeight(this.seg === 1 ? Weight.SUBTITLE : Weight.BODY)
+                  .letterSpacing(1)
+                Column()
+                  .width(14)
+                  .height(2)
+                  .backgroundColor(this.seg === 1 ? Seal.RED : Color.Transparent)
+                  .margin({ top: 5 })
+              }
+              .layoutWeight(1)
+              .padding({ top: 4, bottom: 2 })
+              .onClick(() => {
+                this.seg = 1;
+              })
+            }
+            .width('100%')
+            .border({ width: { bottom: 1 }, color: Rule.HAIR })
+            .margin({ bottom: Space.MD })
+
+            if (this.seg === 0) {
+              ForEach(REWARDS, (r: Reward) => {
+                Row() {
+                  Column() {
+                    Image(this.rewardIcon(r))
+                      .width(20)
+                      .height(20)
+                      .fillColor(this.balance >= r.cost ? Brand.PRIMARY : Ink.L4)
+                      .objectFit(ImageFit.Contain)
+                  }
+                  .width(40)
+                  .height(40)
+                  .borderRadius(Radius.SM)
+                  .backgroundColor(this.balance >= r.cost ? this.rewardSoft(r) : Bg.SUBTLE)
+                  .justifyContent(FlexAlign.Center)
+                  .alignItems(HorizontalAlign.Center)
+                  .margin({ right: Space.MD })
+
+                  Column() {
+                    Text(r.name)
+                      .fontSize(FontSize.BODY_M)
+                      .fontWeight(Weight.SUBTITLE)
+                      .fontColor(this.balance >= r.cost ? Ink.L1 : Ink.L3)
+                      .maxLines(1)
+                    Text(r.desc)
+                      .fontSize(FontSize.CAPTION)
+                      .fontColor(this.balance >= r.cost ? Ink.L3 : Ink.L4)
+                      .maxLines(1)
+                      .margin({ top: 3 })
+                  }
+                  .alignItems(HorizontalAlign.Start)
+                  .layoutWeight(1)
+
+                  Column() {
+                    Text(`${r.cost} 分`)
+                      .fontSize(FontSize.BODY_S)
+                      .fontWeight(Weight.SUBTITLE)
+                      .fontColor(this.balance >= r.cost ? Semantic.ALERT : Ink.L4)
+                    Button(this.owned.indexOf(r.id) >= 0 ? '已拥有' : '兑换', { type: ButtonType.Normal })
+                      .fontSize(FontSize.BODY_S)
+                      .height(32)
+                      .padding({ left: 14, right: 14 })
+                      .borderRadius(Radius.XS)
+                      .backgroundColor(this.owned.indexOf(r.id) >= 0
+                        ? Bg.SUBTLE
+                        : (this.balance >= r.cost ? Brand.PRIMARY : Bg.SUBTLE))
+                      .fontColor(this.owned.indexOf(r.id) >= 0
+                        ? Ink.L3
+                        : (this.balance >= r.cost ? Ink.ON_BRAND : Ink.L3))
+                      .margin({ top: 6 })
+                      .onClick(() => {
+                        this.redeemLocal(r);
+                      })
+                  }
+                  .alignItems(HorizontalAlign.End)
+                  .margin({ left: Space.SM })
+                }
+                .width('100%')
+                .padding(Space.MD)
+                .backgroundColor(Bg.CARD)
+                .borderRadius(Radius.MD)
+                .border({ width: 1, color: Edge.HAIR })
+                .margin({ bottom: Space.SM })
+                .alignItems(VerticalAlign.Center)
+              }, (r: Reward) => r.id)
+            } else {
+              if (this.owned.length === 0) {
+                Text('还没有兑换过 —— 切到「可兑换」，攒够积分换一枚徽章或一张证书。')
+                  .fontSize(FontSize.BODY_S)
+                  .fontColor(Ink.L3)
+                  .lineHeight(LineHeight.BODY_S)
+                  .width('100%')
+                  .padding({ top: 6, bottom: 6 })
+              } else {
+                ForEach(this.ownedItems(), (r: Reward) => {
+                  if (r.id.indexOf('cert.') === 0) {
+                    // 证书：真的印成一张证书，兑换之后有东西可看
+                    Column() {
+                      Row() {
+                        Text('碳 迹 · 减 排 证 书')
+                          .fontSize(10)
+                          .fontColor(Ink.L3)
+                          .letterSpacing(2)
+                        Blank()
+                        Text(today())
+                          .fontSize(9)
+                          .fontColor(Ink.L3)
+                      }
+                      .width('100%')
+
+                      Divider().strokeWidth(0.8).color(Rule.HAIR).margin({ top: 8, bottom: 12 })
+
+                      Text(r.name)
+                        .fontSize(19)
+                        .fontColor(Ink.L1)
+                        .width('100%')
+                        .textAlign(TextAlign.Center)
+
+                      Text('授予')
+                        .fontSize(10)
+                        .fontColor(Ink.L3)
+                        .margin({ top: 12 })
+                      Text(this.holderName)
+                        .fontSize(15)
+                        .fontColor(Ink.L1)
+                        .margin({ top: 3 })
+
+                      Text(`累计减排 ${this.totalSaved.toFixed(2)} kg CO₂e`)
+                        .fontSize(11)
+                        .fontColor(Ink.L2)
+                        .margin({ top: 10 })
+
+                      Divider().strokeWidth(0.8).color(Rule.HAIR).margin({ top: 12, bottom: 8 })
+
+                      Row() {
+                        Text('本机生成 · 数据不出设备')
+                          .fontSize(9)
+                          .fontColor(Ink.L4)
+                        Blank()
+                        Text('碳 迹')
+                          .fontSize(10)
+                          .fontColor(Brand.PRIMARY)
+                          .border({ width: 1, color: Brand.PRIMARY, radius: Radius.XS })
+                          .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                          .rotate({ angle: -5 })
+                      }
+                      .width('100%')
+                      .alignItems(VerticalAlign.Center)
+                    }
+                    .width('100%')
+                    .padding(Space.LG)
+                    .backgroundColor(Bg.CARD)
+                    .border({ width: 1, color: Edge.HAIR })
+                    .borderRadius(Radius.SM)
+                    .margin({ bottom: Space.SM })
+                  } else {
+                    // 徽章：一行小条目，与兑换列表同一节奏
+                    Row() {
+                      Column() {
+                        Image(this.rewardIcon(r))
+                          .width(18)
+                          .height(18)
+                          .fillColor(Ink.ON_BRAND)
+                          .objectFit(ImageFit.Contain)
+                      }
+                      .width(34)
+                      .height(34)
+                      .borderRadius(Radius.SM)
+                      .backgroundColor(Brand.PRIMARY)
+                      .justifyContent(FlexAlign.Center)
+                      .alignItems(HorizontalAlign.Center)
+                      .margin({ right: Space.MD })
+
+                      Column() {
+                        Text(r.name)
+                          .fontSize(FontSize.BODY_M)
+                          .fontColor(Ink.L1)
+                        Text(r.desc)
+                          .fontSize(FontSize.CAPTION)
+                          .fontColor(Ink.L3)
+                          .margin({ top: 2 })
+                      }
+                      .alignItems(HorizontalAlign.Start)
+                      .layoutWeight(1)
+
+                      Text('已 获 得')
+                        .fontSize(9)
+                        .fontColor(Brand.PRIMARY)
+                        .letterSpacing(1)
+                        .border({ width: 0.8, color: Brand.PRIMARY, radius: 1 })
+                        .padding({ left: 5, right: 5, top: 2, bottom: 2 })
+                    }
+                    .width('100%')
+                    .padding({ top: 10, bottom: 10 })
+                    .alignItems(VerticalAlign.Center)
+                    .border({ width: { bottom: 1 }, color: Rule.HAIR })
+                  }
+                }, (r: Reward) => r.id)
+
+                Text('徽章与证书都由本机生成，可截图保存；兑换后不会重复扣分。')
+                  .fontSize(FontSize.CAPTION)
+                  .fontColor(Ink.L4)
+                  .lineHeight(15)
+                  .width('100%')
+                  .margin({ top: Space.SM })
+              }
+            }
           }
 
           // ============ 流水 ============

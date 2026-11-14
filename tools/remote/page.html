@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#201D17">
+<title>碳迹 · 远程</title>
+<style>
+  :root{
+    --ink:#201D17; --ink2:#4C463A; --ink3:#857C6A; --ink4:#B5AC98;
+    --paper:#F2EDE1; --card:#FBF8F1; --seal:#AB3A28;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--ink)}
+  body{
+    display:flex;flex-direction:column;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;
+    color:var(--paper);
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  /* 状态条：细、安静，只在异常时抢注意力 */
+  #bar{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 12px;font-size:11px;letter-spacing:.04em;
+    color:var(--ink4);flex:0 0 auto;
+  }
+  #dot{width:6px;height:6px;border-radius:50%;background:var(--ink3);flex:0 0 auto}
+  #dot.on{background:#6E8B5B}
+  #dot.err{background:var(--seal)}
+  #msg{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #stat{font-variant-numeric:tabular-nums;flex:0 0 auto}
+  /* 拍照送达：按账本语言做成一条细线动作行，不是右上角的工具图标 */
+  #shootRow{
+    flex:0 0 auto;padding:0 8px 8px;
+  }
+  #shoot{
+    width:100%;display:flex;align-items:center;
+    background:transparent;border:1px solid rgba(181,172,152,.34);
+    border-radius:2px;color:var(--paper);
+    padding:11px 14px;font-family:inherit;
+    font-size:13px;letter-spacing:2px;cursor:pointer;
+  }
+  #shootArrow{margin-left:auto;font-size:14px;letter-spacing:0}
+  #shoot:active{border-color:var(--paper)}
+  #shoot.busy{opacity:.5;pointer-events:none}
+  #shootLabel{white-space:nowrap}
+
+  /* 画面：显式尺寸由 JS 计算，不依赖 flex 的自动尺寸 */
+  #stage{
+    flex:1 1 auto;min-height:0;min-width:0;
+    position:relative;overflow:hidden;
+    background:var(--ink);
+  }
+  #screen{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    display:block;
+    background:var(--paper);
+    border-radius:2px;
+    box-shadow:0 0 0 1px rgba(181,172,152,.18);
+    touch-action:none;
+    width:auto;height:auto;
+  }
+
+  /* 控制条 */
+  #ctl{
+    flex:0 0 auto;display:flex;align-items:center;gap:4px;
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+    border-top:1px solid rgba(181,172,152,.16);
+  }
+  button{
+    flex:1 1 0;min-width:0;
+    background:transparent;border:1px solid rgba(181,172,152,.22);
+    color:var(--ink4);border-radius:2px;
+    padding:9px 2px;font-size:12px;font-family:inherit;
+    letter-spacing:.02em;cursor:pointer;
+    transition:color .12s,border-color .12s;
+  }
+  button:active,button.on{color:var(--paper);border-color:var(--ink4)}
+  button.seal{color:var(--seal);border-color:rgba(171,58,40,.5);flex:0 0 auto;padding:9px 12px}
+  #ctl button:first-of-type{flex:0 0 auto;padding:9px 12px}
+
+  /* 断线遮罩 */
+  #veil{
+    position:fixed;inset:0;display:none;
+    align-items:center;justify-content:center;
+    background:rgba(32,29,23,.94);z-index:9;
+    font-size:13px;color:var(--ink4);text-align:center;padding:32px;line-height:1.7;
+  }
+  #veil.show{display:flex}
+</style>
+</head>
+<body>
+  <div id="bar">
+    <div id="dot"></div>
+    <div id="msg">连接中…</div>
+    <div id="stat"></div>
+  </div>
+  <input id="cam" type="file" accept="image/*" capture="environment" style="display:none">
+
+  <div id="stage">
+    <canvas id="screen" width="660" height="1116"></canvas>
+  </div>
+
+  <div id="shootRow">
+    <button id="shoot">
+      <span id="shootLabel">拍 照 送 达</span>
+      <span id="shootArrow">⇢</span>
+    </button>
+  </div>
+
+  <div id="ctl">
+    <button id="backBtn" title="系统返回">←</button>
+    <button data-tab="0" class="on">记一笔</button>
+    <button data-tab="1">看板</button>
+    <button data-tab="2">积分</button>
+    <button data-tab="3">科普</button>
+    <button data-tab="4">我的</button>
+  </div>
+
+  <div id="veil"><div>
+    连不上电脑。<br>确认手机和 Mac 在同一个 Wi-Fi，<br>并且电脑上的服务还在跑。
+  </div></div>
+
+<script>
+const cv = document.getElementById('screen')
+const ctx = cv.getContext('2d')
+const dot = document.getElementById('dot')
+const msgEl = document.getElementById('msg')
+const statEl = document.getElementById('stat')
+const veil = document.getElementById('veil')
+
+let ws = null
+let frames = 0
+let lastFrameAt = 0
+let fps = 0
+let retry = 0
+let everGot = false
+let tabBtns = [...document.querySelectorAll('[data-tab]')]
+
+// 部署前缀：局域网直连 location.pathname 是 '/'，经服务器子路径访问是 '/carbon/'
+const BASE = location.pathname.replace(/\/+$/, '')
+
+function token(){ return new URLSearchParams(location.search).get('t') ?? '' }
+
+function setState(kind, text){
+  dot.className = kind
+  msgEl.textContent = text
+}
+
+function connect(){
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const q = token() ? `?t=${encodeURIComponent(token())}` : ''
+  ws = new WebSocket(`${proto}//${location.host}${BASE}/ws${q}`)
+  ws.binaryType = 'blob'
+
+  ws.onopen = () => {
+    retry = 0
+    veil.classList.remove('show')
+    setState('on', '已连接')
+    send({t:'ping'})
+  }
+
+  ws.onmessage = async (ev) => {
+    if (typeof ev.data === 'string') return
+    // 二进制帧 = 一屏 JPEG
+    const bmp = await createImageBitmap(ev.data)
+    if (cv.width !== bmp.width || cv.height !== bmp.height){
+      cv.width = bmp.width; cv.height = bmp.height
+    }
+    ctx.drawImage(bmp, 0, 0)
+    bmp.close?.()
+    frames++
+    lastFrameAt = performance.now()
+    if (!everGot){
+      everGot = true
+      setState('on', '已在投屏')
+      fit()
+    }
+  }
+
+  ws.onclose = () => {
+    setState('err', '断线，重连中…')
+    retry++
+    if (retry >= 3) veil.classList.add('show')
+    setTimeout(connect, Math.min(1000 * retry, 4000))
+  }
+
+  ws.onerror = () => { try{ ws.close() }catch{} }
+}
+
+// 按容器可用空间做 contain 适配（宽高都算，保持 660:1116 比例）
+function fit(){
+  const stage = document.getElementById('stage')
+  const aw = stage.clientWidth - 8
+  const ah = stage.clientHeight - 8
+  if (aw <= 0 || ah <= 0) return
+  const r = cv.width / cv.height
+  let w = aw, h = w / r
+  if (h > ah){ h = ah; w = h * r }
+  cv.style.width = Math.round(w) + 'px'
+  cv.style.height = Math.round(h) + 'px'
+}
+window.addEventListener('resize', fit)
+window.addEventListener('orientationchange', () => setTimeout(fit, 120))
+
+function send(o){
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(o))
+}
+
+// --- 触摸 → 归一化坐标 ---------------------------------------------------
+let start = null
+let moved = false
+
+function norm(t){
+  const r = cv.getBoundingClientRect()
+  return {
+    x: Math.min(1, Math.max(0, (t.clientX - r.left) / r.width)),
+    y: Math.min(1, Math.max(0, (t.clientY - r.top) / r.height)),
+  }
+}
+
+let startAt = 0
+cv.addEventListener('touchstart', (e) => {
+  if (e.touches.length !== 1) return
+  e.preventDefault()
+  start = norm(e.touches[0])
+  startAt = performance.now()
+  moved = false
+}, {passive:false})
+
+cv.addEventListener('touchmove', (e) => {
+  if (!start || e.touches.length !== 1) return
+  e.preventDefault()
+  const p = norm(e.touches[0])
+  // 8px 阈值，区分点击和滑动（手指抖一下不该变成拖拽）
+  const r = cv.getBoundingClientRect()
+  if (Math.abs((p.x - start.x) * r.width) > 8 || Math.abs((p.y - start.y) * r.height) > 8) moved = true
+}, {passive:false})
+
+cv.addEventListener('touchend', (e) => {
+  if (!start) return
+  e.preventDefault()
+  const t = e.changedTouches[0]
+  const p = norm(t)
+  if (moved){
+    // 时长跟随真实手势：划得快 → 滚动短促；划得慢 → 更接近拖拽
+    const dur = Math.max(200, Math.min(2000, performance.now() - startAt))
+    send({t:'drag', x1:start.x, y1:start.y, x2:p.x, y2:p.y, ms:Math.round(dur)})
+  } else {
+    // 直接在画面上点（可能点的是应用内自己的页签）→ 清掉控制条高亮，避免显示错位
+    tabBtns.forEach((x) => x.classList.remove('on'))
+    send({t:'tap', x:p.x, y:p.y})
+  }
+  start = null
+  moved = false
+}, {passive:false})
+
+// 桌面浏览器用鼠标也能点（方便在电脑上验证）
+cv.addEventListener('click', (e) => {
+  if (window.matchMedia('(pointer:fine)').matches){
+    const r = cv.getBoundingClientRect()
+    send({t:'tap', x:(e.clientX-r.left)/r.width, y:(e.clientY-r.top)/r.height})
+  }
+})
+
+// --- 手机拍照送达 ---------------------------------------------------------
+// 模拟器没有相机应用，所以拍照放在手机上做：
+//   手机拍 → 上传给电脑 → 电脑用 hdc 推到模拟器固定路径 → 应用里点「手机取图」
+const shootBtn = document.getElementById('shoot')
+const camInput = document.getElementById('cam')
+
+shootBtn.addEventListener('click', () => camInput.click())
+
+camInput.addEventListener('change', async () => {
+  const f = camInput.files && camInput.files[0]
+  if (!f) return
+  shootBtn.classList.add('busy')
+  setState('on', '正在送到模拟器…')
+  try {
+    const q = token() ? `?t=${encodeURIComponent(token())}` : ''
+    const r = await fetch(`${BASE}/upload${q}`, { method: 'POST', body: f })
+    const j = await r.json()
+    if (j.ok) {
+      setState('on', '已送达 · 去应用里点「手机取图」')
+    } else {
+      setState('err', '送达失败：' + (j.error ?? '未知'))
+    }
+  } catch (e) {
+    setState('err', '送达失败：' + e.message)
+  } finally {
+    shootBtn.classList.remove('busy')
+    camInput.value = ''
+  }
+})
+
+// --- 控制条 ---------------------------------------------------------------
+document.getElementById('backBtn').addEventListener('click', () => send({t:'back'}))
+tabBtns.forEach((b) => {
+  b.addEventListener('click', () => {
+    tabBtns.forEach((x) => x.classList.remove('on'))
+    b.classList.add('on')
+    send({t:'tab', i:Number(b.dataset.tab)})
+  })
+})
+
+// --- 状态刷新 -------------------------------------------------------------
+// 注意：画面静止时服务端不发帧（去重省流量），所以「没新帧」不等于「无画面」
+setInterval(() => {
+  const now = performance.now()
+  if (now - lastFrameAt < 1500){
+    const f = Math.round(frames / 1.5)
+    frames = 0
+    lastFrameAt = now
+    fps = f
+    statEl.textContent = `${f} fps`
+  } else if (everGot) {
+    statEl.textContent = '静止'
+  } else {
+    statEl.textContent = '无画面'
+  }
+}, 1500)
+
+fit()
+// --- 自动跟随服务端更新 ---------------------------------------------------
+// 服务端换了页面脚本（修 bug / 加功能）后，手机上不用手动刷新
+let myVersion = null
+async function checkVersion(){
+  try {
+    const r = await fetch(`${BASE}/healthz`, { cache: 'no-store' })
+    const j = await r.json()
+    if (!myVersion) myVersion = j.assetVersion
+    else if (j.assetVersion && j.assetVersion !== myVersion) location.reload()
+  } catch {}
+}
+setInterval(checkVersion, 15000)
+setTimeout(checkVersion, 1500)
+
+fit()
+connect()
+</script>
+</body>
+</html>

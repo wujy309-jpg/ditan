@@ -22,7 +22,7 @@ import { CarbonRepository, CategoryTotal } from '../data/CarbonRepository';
 import { BehaviorRecord, categoryLabel, formatDate, round2, today } from '../model/Models';
 import { CategoryBarChart, CategoryPieChart, ChartPayload, TrendLineChart } from './Charts';
 import { SmartService } from './SmartService';
-import { catColor, CardTitle, Chip, EmptyHint, HeroCard, RankRow, SectionCard } from './Common';
+import { catColor, CardTitle, EmptyHint, HeroCard, RankRow, SectionCard } from './Common';
 import {
   Bg, Brand, Edge, FontSize, Heat, Ink, Motion, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
   shadowCard
@@ -89,6 +89,14 @@ export struct DashboardPage {
    * 报告是全屏的（要盖住页签栏），所以真正的渲染在 Index 里，这里只负责触发。
    */
   onOpenReport: () => void = () => {
+  };
+  /**
+   * 打开「碳迹记录」明细页并预选类目（空串 = 全部）。
+   * 赛题把「支持分类查询历史记录」挂在看板这一条下面：
+   * 分类占比的每一行就是查询入口，点了带着类目跳去明细页 ——
+   * 而不是在看板底部再垒一块列表。
+   */
+  onOpenRecords: (cat: string) => void = () => {
   };
 
   @State grain: string = Grain.WEEK;
@@ -174,9 +182,30 @@ export struct DashboardPage {
     this.todaySaved = round2(this.sumRange(byDate, to, to));
 
     this.buildHeat(byDate);
-    await this.buildTrend(byDate);
+    await this.buildTrend(byDate, all);
 
-    const cats: CategoryTotal[] = await repo.savedByCategory();
+    // 饼图 / 柱状图与折线图统一口径：都只看「当前粒度区间」。
+    // 原来这里是 savedByCategory() 的全量历史 —— 切粒度时只有折线在动，
+    // 三张图互相打架，占比图例也算不对。
+    const allCats: CategoryTotal[] = await repo.savedByCategory();
+    const inRange: Map<string, number> = new Map<string, number>();
+    for (let i = 0; i < all.length; i++) {
+      const r: BehaviorRecord = all[i];
+      if (r.date >= from && r.date <= to) {
+        const p: number | undefined = inRange.get(r.category);
+        inRange.set(r.category, (p === undefined ? 0 : p) + r.saved);
+      }
+    }
+    const cats: CategoryTotal[] = [];
+    for (let i = 0; i < allCats.length; i++) {
+      const v: number | undefined = inRange.get(allCats[i].category);
+      const item: CategoryTotal = {
+        category: allCats[i].category,
+        label: allCats[i].label,
+        total: round2(v === undefined ? 0 : v)
+      };
+      cats.push(item);
+    }
     this.byCat = cats;
 
     const labels: string[] = [];
@@ -369,37 +398,68 @@ export struct DashboardPage {
   /**
    * 按粒度组装折线图 + 幽灵线的 X 轴分桶。
    *
-   * 幽灵线的口径：「把整个窗口往前平移一个窗口长度」。
-   *   周视图 → 上周同期；月视图 → 前 30 天；年视图 → 去年同月。
-   * 这样两条线逐点可比，读者不用换算。
+   * 口径与顶部「区间」严格一致，全部按**日历**切：
+   *   日 → 今天 00:00 起按小时 24 桶；周 → 本周一至周日按天 7 桶；
+   *   月 → 本月 1 日至月末按天；年 → 本年 12 个月。
+   * 幽灵线取「上一期同位置」：昨天同一小时 / 上周同一天 / 上月同一天 / 去年同月。
+   *
+   * 为什么改：原来日视图没有分支，落进了周的 7 天逻辑（日 ≡ 周）；
+   * 而周/月用的是「滚动 7/30 天」，与顶部「本周一 / 本月 1 日」的区间是两套口径，
+   * 结果是折线有数据、柱状与饼图为空，还挂着「本期还没有记录」。
    */
-  private async buildTrend(byDate: Map<string, number>): Promise<void> {
+  /** 按录入时间戳求和（日视图按小时分桶用；记录里带 ts 毫秒时间戳） */
+  private sumTs(all: BehaviorRecord[], from: number, to: number): number {
+    let s: number = 0;
+    for (let i = 0; i < all.length; i++) {
+      const t: number = all[i].ts;
+      if (t >= from && t < to) {
+        s += all[i].saved;
+      }
+    }
+    return s;
+  }
+
+  private async buildTrend(byDate: Map<string, number>, all: BehaviorRecord[]): Promise<void> {
     const labels: string[] = [];
     const values: number[] = [];
     const prev: number[] = [];
+    const now: Date = new Date();
 
-    if (this.grain === Grain.YEAR) {
-      const y: number = new Date().getFullYear();
-      for (let m = 0; m < 12; m++) {
-        const mm: string = pad2(m + 1);
-        labels.push(`${m + 1}月`);
-        values.push(round2(this.sumRange(byDate, `${y}-${mm}-01`, `${y}-${mm}-31`)));
-        prev.push(round2(this.sumRange(byDate, `${y - 1}-${mm}-01`, `${y - 1}-${mm}-31`)));
+    if (this.grain === Grain.DAY) {
+      const HOUR: number = 60 * 60 * 1000;
+      const dayStart: number = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      for (let h = 0; h < 24; h++) {
+        const hs: number = dayStart + h * HOUR;
+        labels.push(`${h}时`);
+        values.push(round2(this.sumTs(all, hs, hs + HOUR)));
+        prev.push(round2(this.sumTs(all, hs - 24 * HOUR, hs - 24 * HOUR + HOUR)));
       }
-    } else {
-      let days: number = 7;
-      if (this.grain === Grain.MONTH) {
-        days = 30;
-      }
-      for (let back = days - 1; back >= 0; back--) {
-        const d: Date = new Date();
-        d.setDate(d.getDate() - back);
+    } else if (this.grain === Grain.WEEK) {
+      const back: number = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      const monday: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
+      for (let i = 0; i < 7; i++) {
+        const d: Date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
         labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
         values.push(round2(this.daySaved(byDate, formatDate(d))));
-        // 上期 = 同一个点往前平移 days 天
-        const pd: Date = new Date();
-        pd.setDate(pd.getDate() - back - days);
+        const pd: Date = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7);
         prev.push(round2(this.daySaved(byDate, formatDate(pd))));
+      }
+    } else if (this.grain === Grain.MONTH) {
+      const y: number = now.getFullYear();
+      const m: number = now.getMonth();
+      const days: number = new Date(y, m + 1, 0).getDate();
+      for (let dd = 1; dd <= days; dd++) {
+        labels.push(`${dd}`);
+        values.push(round2(this.daySaved(byDate, `${y}-${pad2(m + 1)}-${pad2(dd)}`)));
+        prev.push(round2(this.daySaved(byDate, formatDate(new Date(y, m - 1, dd)))));
+      }
+    } else {
+      const y: number = now.getFullYear();
+      for (let mi = 0; mi < 12; mi++) {
+        const mm: string = pad2(mi + 1);
+        labels.push(`${mi + 1}月`);
+        values.push(round2(this.sumRange(byDate, `${y}-${mm}-01`, `${y}-${mm}-31`)));
+        prev.push(round2(this.sumRange(byDate, `${y - 1}-${mm}-01`, `${y - 1}-${mm}-31`)));
       }
     }
 
@@ -771,27 +831,58 @@ export struct DashboardPage {
           })
 
           // ============ 统计粒度 ============
-          SectionCard({ title: '统计粒度', icon: $r('app.media.ic_target'), showIcon: true }) {
-            Flex({ wrap: FlexWrap.Wrap }) {
+          // 它是整页的全局口径（三张图、图例、区间数字都跟着它），
+          // 所以放在图表之前、**不做成卡片** —— 看板已经有英雄区/我的树/日历/三张图，
+          // 再给一行分段套一张卡，就会变成「一摞卡」。做成账本式的四格分段更贴题。
+          Row() {
+            Text('统 计 粒 度')
+              .fontSize(9)
+              .fontColor(Ink.L3)
+              .letterSpacing(2)
+              .margin({ right: 10 })
+
+            Row() {
               ForEach(GRAINS, (g: string) => {
-                Chip({
-                  label: grainLabel(g),
-                  selected: this.grain === g,
-                  onTap: () => {
-                    this.grain = g;
-                    this.refresh();
-                  }
+                Column() {
+                  Text(grainLabel(g))
+                    .fontSize(12)
+                    .fontColor(this.grain === g ? Ink.L1 : Ink.L4)
+                    .fontWeight(this.grain === g ? Weight.SUBTITLE : Weight.BODY)
+                  Column()
+                    .width(14)
+                    .height(2)
+                    .backgroundColor(this.grain === g ? Seal.RED : Color.Transparent)
+                    .margin({ top: 5 })
+                }
+                .layoutWeight(1)
+                .padding({ top: 6, bottom: 2 })
+                .onClick(() => {
+                  this.grain = g;
+                  this.refresh();
                 })
               }, (g: string) => g)
             }
-            .width('100%')
-
-            Text(`区间 ${this.rangeStart()} ~ ${today()} · 共 ${this.rangeCount} 条`)
-              .fontSize(FontSize.BODY_S)
-              .fontColor(Ink.L3)
-              .width('100%')
-              .margin({ top: 2 })
+            .layoutWeight(1)
           }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+          .border({ width: { bottom: 1 }, color: Rule.HAIR })
+          .margin({ bottom: 6 })
+
+          Row() {
+            Text(`区间 ${this.rangeStart()} ~ ${today()}`)
+              .fontSize(FontSize.CAPTION)
+              .fontColor(Ink.L4)
+              .fontFeature('"tnum" 1')
+              .layoutWeight(1)
+            Text(`共 ${this.rangeCount} 条`)
+              .fontSize(FontSize.CAPTION)
+              .fontColor(Ink.L4)
+              .fontFeature('"tnum" 1')
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+          .margin({ bottom: Space.MD })
 
           // ============ 日历热力图：最近 12 周 ============
           // 三条"打卡类标准三件套"里我们最后补上的一件（进度环、勋章墙此前已做）。
@@ -910,35 +1001,97 @@ export struct DashboardPage {
 
             // ============ 柱状图 ============
             SectionCard({ title: '分类减排对比', icon: $r('app.media.ic_tab_chart'), showIcon: true }) {
-              Text('单位：kg CO₂e')
-                .fontSize(FontSize.BODY_S)
-                .fontColor(Ink.L3)
+              if (this.rangeSaved <= 0) {
+                // 区间内没有记录时不画空坐标轴：mpchart 的空图会顶着一屏网格，
+                // 远看像渲染失败。改成一句人话 + 一个「看全年」的动作。
+                Column() {
+                  Text(`本${grainLabel(this.grain)}还没有记录`)
+                    .fontSize(FontSize.BODY_M)
+                    .fontColor(Ink.L3)
+                  Text('切到「月」或「年」就有图；想直接翻账也可以')
+                    .fontSize(FontSize.CAPTION)
+                    .fontColor(Ink.L4)
+                    .margin({ top: 6 })
+                  Row() {
+                    Text('看全年 ›')
+                      .fontSize(FontSize.BODY_S)
+                      .fontColor(Brand.PRIMARY)
+                      .onClick(() => {
+                        this.grain = Grain.YEAR;
+                        this.refresh();
+                      })
+                    Text('｜')
+                      .fontSize(FontSize.BODY_S)
+                      .fontColor(Rule.HAIR)
+                      .margin({ left: 10, right: 10 })
+                    Text('翻明细 ›')
+                      .fontSize(FontSize.BODY_S)
+                      .fontColor(Brand.PRIMARY)
+                      .onClick(() => {
+                        this.onOpenRecords('');
+                      })
+                  }
+                  .alignItems(VerticalAlign.Center)
+                  .margin({ top: 12 })
+                }
                 .width('100%')
-                .margin({ bottom: Space.SM })
-              CategoryBarChart({ payload: this.barPayload })
-                .width('100%')
-                .height(190)
+                .height(150)
+                .justifyContent(FlexAlign.Center)
+                .alignItems(HorizontalAlign.Center)
+              } else {
+                Text('单位：kg CO₂e')
+                  .fontSize(FontSize.BODY_S)
+                  .fontColor(Ink.L3)
+                  .width('100%')
+                  .margin({ bottom: Space.SM })
+                CategoryBarChart({ payload: this.barPayload })
+                  .width('100%')
+                  .height(190)
+              }
             }
 
             // ============ 饼图 + 原生图例 ============
-            SectionCard({ title: '分类占比', icon: $r('app.media.ic_recycle'), showIcon: true }) {
-              CategoryPieChart({ payload: this.piePayload })
-                .width('100%')
-                .height(190)
+            // 区间为空时整张卡不出现：空占比没有信息量，留着就是一块白洞。
+            // 空态提示统一由上面「分类减排对比」那张卡承担。
+            if (this.rangeSaved > 0) {
+              SectionCard({
+                title: '分类占比',
+                icon: $r('app.media.ic_recycle'),
+                showIcon: true,
+                badge: '点类目看明细',
+                badgeColor: Ink.L3
+              }) {
+                CategoryPieChart({ payload: this.piePayload })
+                  .width('100%')
+                  .height(190)
 
-              Divider()
-                .color(Edge.HAIR)
-                .strokeWidth(1)
-                .margin({ top: Space.SM, bottom: Space.MD })
+                Divider()
+                  .color(Edge.HAIR)
+                  .strokeWidth(1)
+                  .margin({ top: Space.SM, bottom: Space.MD })
 
-              ForEach(this.byCat, (c: CategoryTotal) => {
-                RankRow({
-                  label: c.label,
-                  value: `${c.total} kg`,
-                  percent: this.catPercent(c.total),
-                  color: catColor(c.category)
-                })
-              }, (c: CategoryTotal) => c.category)
+                // 图例的每一行都是「分类查询」的入口：点哪一类，就带着这个类目
+                // 跳到记录明细页。查询依赖图上的占比，而不是另起一块列表。
+                ForEach(this.byCat, (c: CategoryTotal) => {
+                  Row() {
+                    RankRow({
+                      label: c.label,
+                      value: `${c.total} kg`,
+                      percent: this.catPercent(c.total),
+                      color: catColor(c.category)
+                    })
+                    Text('›')
+                      .fontSize(13)
+                      .fontColor(Ink.L4)
+                      .margin({ left: 6, top: 2 })
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Top)
+                  .onClick(() => {
+                    this.onOpenRecords(c.category);
+                  })
+                }, (c: CategoryTotal) => c.category)
+              }
             }
           }
 

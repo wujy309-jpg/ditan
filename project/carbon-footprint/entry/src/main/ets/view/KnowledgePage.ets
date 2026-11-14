@@ -20,7 +20,7 @@
 import { allTags, Article, ARTICLES } from '../data/KnowledgeBase';
 import {
   Bg, Brand, CatColor, Edge, FontSize, Ink, LineHeight, Motion, Radius, Rule,
-  Seal, Semantic, Serif, Space, Weight
+  Semantic, Serif, Space, Weight
 } from '../common/Theme';
 import { Chip, EmptyHint, HeroCard, SectionCard } from './Common';
 
@@ -50,7 +50,7 @@ export struct KnowledgePage {
 
   /**
    * 标签 → 语义色。
-   * 政策 / 概念 / 数据 / 技巧必须与 tagSoft() 成对使用，保证「同色同义」。
+   * 政策 / 概念 / 数据 / 技巧各有一个语义色，用于行首的标签文字，保证扫读时「同色同义」。
    */
   private tagColor(t: string): string {
     if (t === '政策') {
@@ -66,40 +66,6 @@ export struct KnowledgePage {
       return CatColor.FOOD;
     }
     return Ink.L2;
-  }
-
-  /** 标签 → 浅色底（与 tagColor 一一对应） */
-  private tagSoft(t: string): string {
-    if (t === '政策') {
-      return Semantic.INFO_SOFT;
-    }
-    if (t === '概念') {
-      return Brand.SOFT;
-    }
-    if (t === '数据') {
-      return Semantic.ALERT_SOFT;
-    }
-    if (t === '技巧') {
-      return CatColor.FOOD_SOFT;
-    }
-    return Bg.SUBTLE;
-  }
-
-  /** 标签 → 图标；只用 app.media 下确实存在的图标 */
-  private tagIcon(t: string): Resource {
-    if (t === '政策') {
-      return $r('app.media.ic_target');
-    }
-    if (t === '概念') {
-      return $r('app.media.ic_leaf');
-    }
-    if (t === '数据') {
-      return $r('app.media.ic_tab_chart');
-    }
-    if (t === '技巧') {
-      return $r('app.media.ic_flame');
-    }
-    return $r('app.media.ic_tab_book');
   }
 
   build() {
@@ -148,16 +114,11 @@ export struct KnowledgePage {
             .alignItems(HorizontalAlign.Start)
           }
 
-          // ============ 标签筛选 ============
-          SectionCard({
-            title: '按标签浏览',
-            icon: $r('app.media.ic_target'),
-            showIcon: true,
-            badge: `${this.list.length} 篇`,
-            badgeColor: Brand.PRIMARY,
-            badgeSoft: Brand.SOFT
-          }) {
-            Flex({ wrap: FlexWrap.Wrap }) {
+          // ============ 标签筛选：裸芯片一行 ============
+          // 原来这里是一张 SectionCard，只装 5 个胶囊 —— 卡片一多，页面就成了「一摞卡」。
+          // 标签是筛选条，不是内容块，做成无卡的一行更符合它的身份。
+          Scroll() {
+            Row() {
               Chip({
                 label: '全部',
                 selected: this.tag.length === 0,
@@ -175,103 +136,95 @@ export struct KnowledgePage {
                 })
               }, (t: string) => t)
             }
-            .width('100%')
           }
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+          .align(Alignment.Start)
+          .width('100%')
+          .margin({ bottom: Space.SM })
 
-          // ============ 文章列表 ============
-          ForEach(this.list, (a: Article) => {
-            // 外层 Column 只负责「整卡可点」与卡间距：
-            // 自定义组件（SectionCard）上不挂 onClick，避免通用属性作用域不确定。
-            Column() {
-              SectionCard({ title: '', showIcon: false, bottomSpace: 0 }) {
-                Row() {
-                  // 40×40 分类色圆角图标块：让每张卡先「有图形」，再读文字
-                  Column() {
-                    Image(this.tagIcon(a.tag))
-                      .width(15)
-                      .height(15)
-                      .fillColor(Ink.L3)
-                      .objectFit(ImageFit.Contain)
-                  }
-                  .width(18)
-                  .height(22)
-                  .justifyContent(FlexAlign.Start)
-                  .alignItems(HorizontalAlign.Center)
-
+          // ============ 文章列表：一张纸 + 若干行 ============
+          // 原来是「一篇一张卡」：10 篇就是 10 张带内边距的白卡，翻起来像一摞便签。
+          // 现在收进同一张账页，行与行用发丝线分隔，展开仍在本行内完成 ——
+          // 内容一个字没少，卡片数从 10 降到 1。
+          if (this.list.length > 0) {
+            SectionCard({
+              title: this.tag.length === 0 ? '全 部 科 普' : `${this.tag}`,
+              icon: $r('app.media.ic_tab_book'),
+              showIcon: true,
+              badge: `${this.list.length} 篇`,
+              badgeColor: Brand.PRIMARY
+            }) {
+              Column() {
+                ForEach(this.list, (a: Article) => {
                   Column() {
                     Row() {
-                      Text(`· ${a.tag}`)
-                        .fontSize(10)
-                        .letterSpacing(1)
-                        .fontColor(Seal.RED)
+                      Column() {
+                        Row() {
+                          Text(`· ${a.tag}`)
+                            .fontSize(10)
+                            .letterSpacing(1)
+                            .fontColor(this.tagColor(a.tag))
+                          Text(a.title)
+                            .fontFamily(Serif.FAMILY)
+                            .fontSize(14)
+                            .fontColor(Ink.L1)
+                            .layoutWeight(1)
+                            .margin({ left: 6 })
+                        }
+                        .width('100%')
+                        .alignItems(VerticalAlign.Center)
 
-                      Text(a.title)
-                        .fontFamily(Serif.FAMILY)
-                        .fontSize(15)
-                        .fontColor(Ink.L1)
-                        .layoutWeight(1)
-                        .margin({ left: Space.SM })
+                        Text(a.summary)
+                          .fontSize(FontSize.BODY_S)
+                          .fontColor(Ink.L3)
+                          .lineHeight(LineHeight.BODY_S)
+                          .maxLines(this.expanded === a.id ? 99 : 2)
+                          .textOverflow({ overflow: TextOverflow.Ellipsis })
+                          .width('100%')
+                          .margin({ top: 4 })
+                      }
+                      .layoutWeight(1)
+                      .alignItems(HorizontalAlign.Start)
+
+                      // 展开态只靠箭头转 90°，省掉「展 开 / 收 起」那一整行
+                      Image($r('app.media.ic_arrow'))
+                        .width(13)
+                        .height(13)
+                        .fillColor(Ink.L4)
+                        .objectFit(ImageFit.Contain)
+                        .rotate({ angle: this.expanded === a.id ? 90 : 0 })
+                        .margin({ left: Space.SM, top: 3 })
                     }
                     .width('100%')
-                    .alignItems(VerticalAlign.Center)
+                    .alignItems(VerticalAlign.Top)
 
-                    Text(a.summary)
-                      .fontSize(FontSize.BODY_S)
-                      .fontColor(Ink.L3)
-                      .lineHeight(LineHeight.BODY_S)
-                      .width('100%')
-                      .margin({ top: 5 })
+                    if (this.expanded === a.id) {
+                      Divider()
+                        .color(Edge.HAIR)
+                        .strokeWidth(1)
+                        .margin({ top: Space.MD, bottom: Space.MD })
+
+                      Text(a.body)
+                        .fontSize(FontSize.BODY_M)
+                        .fontColor(Ink.L2)
+                        .lineHeight(LineHeight.BODY_L)
+                        .width('100%')
+                    }
                   }
-                  .layoutWeight(1)
-                  .alignItems(HorizontalAlign.Start)
-                  .margin({ left: Space.MD })
-                }
-                .width('100%')
-                .alignItems(VerticalAlign.Top)
-
-                // 展开 / 收起：文字右侧箭头，展开时右箭头转 90° 变成下箭头
-                Row() {
-                  Text(this.expanded === a.id ? '收 起' : '展 开')
-                    .fontSize(10)
-                    .letterSpacing(1)
-                    .fontColor(Ink.L4)
-                  Image($r('app.media.ic_arrow'))
-                    .width(14)
-                    .height(14)
-                    .fillColor(Ink.L3)
-                    .objectFit(ImageFit.Contain)
-                    .rotate({ angle: this.expanded === a.id ? 90 : 0 })
-                    .margin({ left: 2 })
-                }
-                .width('100%')
-                .justifyContent(FlexAlign.End)
-                .alignItems(VerticalAlign.Center)
-                .margin({ top: Space.SM })
-
-                if (this.expanded === a.id) {
-                  // 发丝线把摘要与正文分开，长正文才不会和摘要糊成一片
-                  Divider()
-                    .color(Edge.HAIR)
-                    .strokeWidth(1)
-                    .margin({ top: Space.MD, bottom: Space.MD })
-
-                  Text(a.body)
-                    .fontSize(FontSize.BODY_M)
-                    .fontColor(Ink.L2)
-                    .lineHeight(LineHeight.BODY_L)
-                    .width('100%')
-                }
+                  .width('100%')
+                  .padding({ top: 12, bottom: 12 })
+                  .border({ width: { bottom: 0.8 }, color: Rule.HAIR })
+                  .onClick(() => {
+                    animateTo(Motion.QUICK, () => {
+                      this.expanded = this.expanded === a.id ? '' : a.id;
+                    });
+                  })
+                }, (a: Article) => a.id)
               }
+              .width('100%')
             }
-            .width('100%')
-            .margin({ bottom: Space.MD })
-            .onClick(() => {
-              // 箭头旋转与正文高度变化都走快速弹性曲线，避免「啪」地跳变
-              animateTo(Motion.QUICK, () => {
-                this.expanded = this.expanded === a.id ? '' : a.id;
-              });
-            })
-          }, (a: Article) => a.id)
+          }
 
           // ============ 空状态 ============
           if (this.list.length === 0) {

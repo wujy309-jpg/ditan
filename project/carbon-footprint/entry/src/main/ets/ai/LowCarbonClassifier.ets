@@ -20,8 +20,9 @@ import { camera, cameraPicker } from '@kit.CameraKit';
 import { image } from '@kit.ImageKit';
 import { resourceManager } from '@kit.LocalizationKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
+import { http } from '@kit.NetworkKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { predictTopK } from './MindSporePredictor';
+import { ClassScore, predictTopK } from './MindSporePredictor';
 import {
   AiSuggestion,
   fuse,
@@ -125,6 +126,62 @@ export async function takePhoto(ctx: common.UIAbilityContext): Promise<image.Pix
 }
 
 // ---------------------------------------------------------------------------
+// 手机取图（模拟器没有相机，用手机拍、经局域网送进来）
+// ---------------------------------------------------------------------------
+
+/**
+ * 手机照片的取图地址。
+ *
+ * 为什么是 10.0.2.2：模拟器跑在 QEMU 用户态网络里（自身 10.0.2.15），
+ * 10.0.2.2 是固定的宿主机网关地址 —— **不随 Mac 的局域网 IP 变化**，
+ * 所以写死它比用 Mac 的 Wi-Fi 地址可靠。
+ *
+ * 照片由电脑端的 tools/remote 接收手机上传后放在这里，应用取一次即解码到内存。
+ * 全程只在局域网内传递，不上传云端；推理仍然在本机做。
+ */
+export const PHONE_PHOTO_URL: string = 'http://10.0.2.2:8899/latest.jpg?t=carbon-dev';
+
+/** 从电脑取手机刚拍的那张照片；没有照片、网络不通都返回 undefined */
+export async function pickFromPhonePhoto(
+  url: string = PHONE_PHOTO_URL
+): Promise<image.PixelMap | undefined> {
+  const req: http.HttpRequest = http.createHttp();
+  let source: image.ImageSource | undefined = undefined;
+  try {
+    const resp: http.HttpResponse = await req.request(url, {
+      method: http.RequestMethod.GET,
+      expectDataType: http.HttpDataType.ARRAY_BUFFER,
+      connectTimeout: 4000,
+      readTimeout: 8000
+    });
+    if (resp.responseCode !== http.ResponseCode.OK || resp.result === undefined) {
+      hilog.warn(DOMAIN, TAG, 'pickFromPhonePhoto http %{public}d', resp.responseCode);
+      return undefined;
+    }
+    source = image.createImageSource(resp.result as ArrayBuffer);
+    const pixelMap: image.PixelMap = await source.createPixelMap();
+    return pixelMap;
+  } catch (e) {
+    // 常见原因：还没收到手机照片（404）、电脑端服务没开、模拟器网络没起来
+    hilog.warn(DOMAIN, TAG, 'pickFromPhonePhoto failed: %{public}s', JSON.stringify(e));
+    return undefined;
+  } finally {
+    if (source !== undefined) {
+      try {
+        await source.release();
+      } catch (e) {
+        hilog.warn(DOMAIN, TAG, 'release image source failed');
+      }
+    }
+    try {
+      req.destroy();
+    } catch (e) {
+      hilog.warn(DOMAIN, TAG, 'destroy http request failed');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 识别
 // ---------------------------------------------------------------------------
 
@@ -174,17 +231,27 @@ export async function classify(
   let visionOk: boolean = false;
   let note: string = '';
 
-  // 通路 A：端侧视觉模型
-  if (!visionReady()) {
-    note = '视觉标定表为空，仅使用文字识别通路';
-  } else {
-    try {
-      const topK = await predictTopK(mgr, pixelMap, 5);
+  // 通路 A：端侧视觉模型。
+  // 注意：即使标定表还是空的，也要跑一次推理 —— 把 top-5 打进日志，
+  // 标定表（索引 → 低碳行为）就是靠这些实测数据填出来的，不靠猜。
+  let topK: ClassScore[] = [];
+  try {
+    topK = await predictTopK(mgr, pixelMap, 5);
+    visionOk = true;
+    const brief: string = topK
+      .map((c: ClassScore) => `#${c.index}(${c.score.toFixed(3)})`)
+      .join(' ');
+    hilog.info(DOMAIN, TAG, 'vision top5: %{public}s', brief);
+  } catch (e) {
+    hilog.warn(DOMAIN, TAG, 'vision path unavailable: %{public}s', JSON.stringify(e));
+    note = '端侧模型不可用，已降级为文字识别';
+  }
+
+  if (visionOk) {
+    if (visionReady()) {
       vision = suggestFromVision(topK);
-      visionOk = true;
-    } catch (e) {
-      hilog.warn(DOMAIN, TAG, 'vision path unavailable: %{public}s', JSON.stringify(e));
-      note = '端侧模型不可用，已降级为文字识别';
+    } else {
+      note = '视觉标定表为空，本次仅记录候选索引（见 hilog）';
     }
   }
 

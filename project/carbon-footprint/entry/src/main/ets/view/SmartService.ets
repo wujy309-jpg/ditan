@@ -243,6 +243,8 @@ export struct SmartService {
 
   @State tasks: DailyTask[] = [];
   @State advice: string[] = [];
+  /** 建议默认只露第一条，其余折叠 —— 三条建议铺满半屏，把凭证挤到一屏之外 */
+  @State adviceOpen: boolean = false;
   @State share: SharePayload = new SharePayload();
 
   @State dbg: string = '';
@@ -428,21 +430,32 @@ export struct SmartService {
     Column() {
       // ---------- 今日任务 ----------
       Column() {
+        // 表头与 SectionCard 同一套语言（朱砂短线 + 宋体标题 + 双线）：
+        // 这三块以前是"另一套卡片"，和上面十张卡放在一页里，像两个 App 拼起来的。
         Row() {
+          Column()
+            .width(9)
+            .height(2)
+            .backgroundColor(Seal.RED)
+            .margin({ right: 7 })
           Text('今 日 低 碳 任 务')
             .fontFamily(Serif.FAMILY)
-            .fontSize(14)
+            .fontSize(15)
             .fontColor(Ink.L1)
+            .letterSpacing(0.8)
             .layoutWeight(1)
           Text('智 能 任 务')
-            .fontSize(9)
-            .letterSpacing(1)
+            .fontSize(10)
             .fontColor(Seal.RED)
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .padding({ left: 5, right: 5, top: 2, bottom: 2 })
             .border({ width: 0.8, color: Seal.RED, radius: 1 })
         }
         .width('100%')
-        .margin({ bottom: 10 })
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 8 })
+
+        Column().width('100%').height(1).backgroundColor(Rule.STRONG)
+        Column().width('100%').height(1).backgroundColor(Rule.HAIR).margin({ top: 2.5, bottom: 12 })
 
         if (this.tasks.length === 0) {
           Text('暂无任务')
@@ -487,19 +500,41 @@ export struct SmartService {
 
       // ---------- 生活建议 ----------
       Column() {
-        Text('给你的低碳建议')
-          .fontSize(15)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(Ink.L1)
-          .width('100%')
-          .margin({ bottom: 10 })
+        Row() {
+          Column()
+            .width(9)
+            .height(2)
+            .backgroundColor(Seal.RED)
+            .margin({ right: 7 })
+          Text('给 你 的 低 碳 建 议')
+            .fontFamily(Serif.FAMILY)
+            .fontSize(15)
+            .fontColor(Ink.L1)
+            .letterSpacing(0.8)
+            .layoutWeight(1)
+          if (this.advice.length > 1) {
+            Text(this.adviceOpen ? '收起' : `展开 ${this.advice.length - 1} 条`)
+              .fontSize(10)
+              .fontColor(Ink.L3)
+              .padding({ left: 6, top: 2, bottom: 2 })
+              .onClick(() => {
+                this.adviceOpen = !this.adviceOpen;
+              })
+          }
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 8 })
+
+        Column().width('100%').height(1).backgroundColor(Rule.STRONG)
+        Column().width('100%').height(1).backgroundColor(Rule.HAIR).margin({ top: 2.5, bottom: 10 })
         if (this.advice.length === 0) {
           Text('记录一些数据后，这里会根据你的情况给出建议。')
             .fontSize(12)
             .fontColor(Ink.L3)
             .width('100%')
         } else {
-          ForEach(this.advice, (a: string) => {
+          ForEach(this.adviceOpen ? this.advice : this.advice.slice(0, 1), (a: string) => {
             Row() {
               Text('·')
                 .fontSize(14)
@@ -526,21 +561,29 @@ export struct SmartService {
       // ---------- 分享 ----------
       Column() {
         Row() {
+          Column()
+            .width(9)
+            .height(2)
+            .backgroundColor(Seal.RED)
+            .margin({ right: 7 })
           Text('减 排 凭 证')
             .fontFamily(Serif.FAMILY)
-            .fontSize(14)
+            .fontSize(15)
             .fontColor(Ink.L1)
+            .letterSpacing(0.8)
             .layoutWeight(1)
           Text('可 分 享')
-            .fontSize(9)
-            .letterSpacing(1)
+            .fontSize(10)
             .fontColor(Seal.RED)
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .padding({ left: 5, right: 5, top: 2, bottom: 2 })
             .border({ width: 0.8, color: Seal.RED, radius: 1 })
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
-        .margin({ bottom: 10 })
+        .margin({ bottom: 8 })
+
+        Column().width('100%').height(1).backgroundColor(Rule.STRONG)
+        Column().width('100%').height(1).backgroundColor(Rule.HAIR).margin({ top: 2.5, bottom: 12 })
 
         // 不再在票面上方复述「累计 X kg · N 条」—— 票面里已经有了。
         // 同一个数字在一屏里说两遍，是「模板感」最常见的来源之一。

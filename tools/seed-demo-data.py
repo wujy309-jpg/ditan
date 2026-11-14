@@ -292,21 +292,31 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--clean", type=int, default=0,
                     help="先删掉最近记录里最新的 N 条（清掉调试残留）")
+    ap.add_argument("--plan", default="",
+                    help='临时覆盖默认计划，格式 "类目:数量:几天前,类目:数量:几天前"；'
+                         "用于给日/周视图补近期数据（默认计划跨 3~17 天，当天是空的）")
     a = ap.parse_args()
+
+    plan = list(RECORDS)
+    if a.plan:
+        plan = []
+        for item in a.plan.split(","):
+            cat, amount, back = item.strip().split(":")
+            plan.append((cat, amount, int(back)))
 
     for i in range(a.clean):
         ok = delete_first_record()
         print(f"清理第 {i + 1} 条：{'成功' if ok else '没找到删除按钮'}")
 
-    print(f"开始填充演示数据（共 {len(RECORDS)} 条）…")
+    print(f"开始填充演示数据（共 {len(plan)} 条）…")
     ok = 0
-    for cat, amount, back in RECORDS:
+    for cat, amount, back in plan:
         ds = (date.today() - timedelta(days=back)).isoformat()
         print(f"  → {cat:8s} {amount:>3s}  {ds}")
         if seed_one(cat, amount, ds):
             ok += 1
-    print(f"完成：成功录入 {ok} / {len(RECORDS)} 条")
-    sys.exit(0 if ok == len(RECORDS) else 1)
+    print(f"完成：成功录入 {ok} / {len(plan)} 条")
+    sys.exit(0 if ok == len(plan) else 1)
 
 
 if __name__ == "__main__":

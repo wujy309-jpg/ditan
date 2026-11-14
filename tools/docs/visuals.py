@@ -23,7 +23,12 @@ def serif(size, bold=True):
 def sans(size):
     return ImageFont.truetype(SANS, size)
 
+NAKED = False
+
+
 def paper(w, h, base=PAPER, amp=3.2, seed=7):
+    if NAKED:
+        return Image.new("RGBA", (w, h), (0, 0, 0, 0))
     import numpy as np
     rng = np.random.default_rng(seed)
     lh, lw = (h + 7) // 8, (w + 7) // 8
@@ -119,9 +124,9 @@ def architecture(path):
     d.text((100, 214), "四层结构，自上而下；箭头表示调用方向", font=sans(30), fill=INK3)
 
     layers = [
-        ("表现层", "五个页签 + 年度报告", [
-            "记一笔\nEntryPage", "看板\nDashboard / Charts", "积分\nPointsPage",
-            "科普\nKnowledgePage", "我的\nProfilePage", "年报\nYearReport"
+        ("表现层", "五个页签 + 记录页 + 年报 / 凭证", [
+            "记一笔\nEntryPage", "看板\nDashboard / Charts", "记录\nRecordsPage",
+            "积分\nPointsPage", "科普\nKnowledgePage", "我的\nProfilePage"
         ], "11 个通用组件 · 零第三方 UI 依赖"),
         ("业务层", "领域逻辑，不依赖界面", [
             "减排核算\nER = AD × EF", "积分与徽章", "任务推荐\n短板优先",
@@ -248,6 +253,53 @@ def ai_path(path):
     arrow(d, 980, 620, 1120, 500, fill=INK4, width=3, head=12)
     im.save(path)
 
+def sync_diagram(path):
+    """超级终端同步：两台设备 + 共享 KV + 时间戳信封。"""
+    W, H = 1600, 960
+    im = paper(W, H, base=PAPER_L, amp=2.0, seed=21)
+    d = ImageDraw.Draw(im)
+    d.text((90, 66), "超级终端同步", font=serif(46), fill=INK)
+    d.line([(90, 138), (620, 138)], fill=INK, width=4)
+    d.line([(90, 150), (620, 150)], fill=RULE, width=2)
+    d.text((90, 172), "设备间直连，不经过云端", font=sans(26), fill=INK3)
+
+    def device(x, y, name, sub, cur=None):
+        d.rectangle([x, y, x + 330, y + 420], outline=INK2, width=3)
+        d.rectangle([x + 18, y + 46, x + 312, y + 360], outline=RULE, width=2, fill=PAPER)
+        d.text((x + 24, y + 16), name, font=sans(28), fill=INK)
+        d.text((x + 150, y + 300), sub, font=sans(22), fill=INK3)
+        if cur:
+            d.text((x + 40, y + 96), cur, font=sans(26), fill=INK2)
+            d.text((x + 40, y + 150), "碳迹 · 减排账", font=serif(30), fill=INK)
+            d.line([(x + 40, y + 206), (x + 290, y + 206)], fill=RULE, width=2)
+            d.text((x + 40, y + 232), "行为 12 条 · 21.75 kg", font=sans(24), fill=INK2)
+            d.text((x + 40, y + 276), "积分 2,175 分", font=sans(24), fill=INK2)
+
+    device(90, 300, "本机 · 手机", "信封写入 ts=…a3f1", "09:41")
+    device(1180, 300, "可信设备 · 平板", "收到较新版本，胜出", "09:41")
+
+    # 中间：分布式 KV + 信封
+    cx, cy = 470, 360
+    d.rectangle([cx, cy, cx + 660, cy + 300], outline=INK2, width=3, fill=PAPER_L)
+    d.text((cx + 30, cy + 26), "分布式键值库", font=serif(32), fill=INK)
+    d.line([(cx + 30, cy + 78), (cx + 630, cy + 78)], fill=RULE, width=2)
+    rows = [("behavior:<id>", "ts 较新者胜"), ("points:<id>", "只增不改"), ("owned:rewards", "归属态同步")]
+    yy = cy + 100
+    for k, v in rows:
+        d.text((cx + 30, yy), k, font=sans(24), fill=INK2)
+        d.text((cx + 360, yy), v, font=sans(22), fill=INK3)
+        yy += 46
+    d.rectangle([cx + 30, cy + 232, cx + 630, cy + 274], outline=SEAL, width=2)
+    d.text((cx + 44, cy + 240), "{ payload, ts, origin }", font=sans(24), fill=SEAL)
+
+    # 箭头
+    arrow(d, 430, 470, 466, 470, fill=INK3, width=3, head=12)
+    arrow(d, 1134, 470, 1170, 470, fill=INK3, width=3, head=12)
+    d.text((470, 700), "同一账号 + 完成认证 + 同一局域网", font=sans(24), fill=INK3)
+    d.text((470, 748), "冲突计数 +1 只在本地拒绝远端版本时发生", font=sans(22), fill=INK4)
+    im.save(path)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     paper(1920, 1080).save(f"{OUT}/paper-bg.png")
@@ -258,4 +310,10 @@ if __name__ == "__main__":
     architecture(f"{OUT}/architecture.png")
     loop(f"{OUT}/loop.png")
     ai_path(f"{OUT}/ai-path.png")
+    sync_diagram(f"{OUT}/sync.png")
+    # 透明底版本：叠在 PPT / 视频的纸纹背景上，不出现「贴了一块纸」
+    globals()["NAKED"] = True
+    architecture(f"{OUT}/architecture-naked.png")
+    loop(f"{OUT}/loop-naked.png")
+    ai_path(f"{OUT}/ai-naked.png")
     print("ok", os.listdir(OUT))
