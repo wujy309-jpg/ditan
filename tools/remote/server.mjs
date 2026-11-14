@@ -25,15 +25,17 @@
  */
 import http from 'node:http'
 import crypto from 'node:crypto'
-import { execFile } from 'node:child_process'
+import { execFile as execFileCb } from 'node:child_process'
 import { promisify } from 'node:util'
 import { readFile, access, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { tmpdir, networkInterfaces } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import zlib from 'node:zlib'
 
-const pexec = promisify(execFile)
+const pexec = promisify(execFileCb)
+const execFile = execFileCb
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 
 // --- 参数 -------------------------------------------------------------------
@@ -106,6 +108,38 @@ const DEVICE_FRAME = '/data/local/tmp/carbon-live.jpeg'  // 注意：snapshot_di
 const LOCAL_FRAME = path.join(tmpdir(), 'carbon-live.jpeg')
 const LOCAL_PHONE = path.join(tmpdir(), 'carbon-phone.jpg')
 const UPLOAD_MAX = 16 * 1024 * 1024
+
+// 电脑摄像头：用 macOS 的 avfoundation 抓一帧（ffmpeg 已装）
+const FFMPEG = (() => {
+  const cands = [
+    process.env.FFMPEG_PATH,
+    '/opt/homebrew/bin/ffmpeg',
+    '/usr/local/bin/ffmpeg',
+    '/usr/bin/ffmpeg',
+  ].filter(Boolean)
+  for (const c of cands) {
+    try {
+      if (existsSync(c)) return c
+    } catch {}
+  }
+  return null
+})()
+const WEBCAM_INDEX = String(flag('webcam', '0')) // 0 = 内置摄像头
+
+// 电脑摄像头：由 Chrome 页面（cam.html）推帧过来。
+// 为什么绕 Chrome：宿主 App 没有 camera entitlement，TCC 直接拒绝且不弹窗；
+// Chrome 已获授权，但必须用 LaunchServices（open -na）启动它，
+// 它才是「责任进程」，否则会继承调用方身份同样被拒。
+let camFrame = null          // { buf, ts }
+let camWantAt = 0            // 最近一次「应用要取景」的时间
+let camLaunchedAt = 0
+const CAM_CHROME_DIR = path.join(tmpdir(), 'carbon-cam-profile')
+const CAM_PAGE = (port) => `http://127.0.0.1:${port}/cam.html?t=${DEVICE_TOKEN}`
+
+// 现场实拍演示图：页面上一键送达，答辩时不用翻目录找文件
+const DEMO_PHOTO = String(
+  flag('demo', path.join(HERE, '..', '..', '素材', '远程演示素材', '现场实拍-共享单车.jpg')),
+)
 
 // 模拟器里的应用取图用的固定令牌（应用里硬编码同一个值）。
 // 注意：它只换得到「最近一张手机照片」，换不到 GUI 控制权。
@@ -256,6 +290,22 @@ async function grabFrame() {
     }
   }
   return grabFrameOnce()
+}
+
+/**
+ * 把一张图片送到模拟器的固定落点：转 JPEG → hdc 推送。
+ * /upload（手机拍的）和 /demo（预设演示图）共用同一条路径，
+ * 保证两条路在应用看来完全一样。
+ */
+async function deliverToEmulator(buf) {
+  const raw = path.join(tmpdir(), 'carbon-upload.raw')
+  await writeFile(raw, buf)
+  await pexec('/usr/bin/sips', ['-s', 'format', 'jpeg', '-Z', '1280', raw, '--out', LOCAL_PHONE], {
+    timeout: 20_000,
+  })
+  const info = await readFile(LOCAL_PHONE)
+  await sh('file', ['send', LOCAL_PHONE, PHONE_PHOTO_PATH])
+  return info.length
 }
 
 // --- 输入注入 ---------------------------------------------------------------
@@ -462,17 +512,10 @@ const server = http.createServer(async (req, res) => {
     req.on('end', async () => {
       if (aborted) return
       try {
-        const raw = path.join(tmpdir(), 'carbon-upload.raw')
-        await writeFile(raw, Buffer.concat(chunks))
-        // 手机的 HEIC/PNG/超大图统一转成 JPEG 并限制长边，模拟器解码更稳
-        await pexec('/usr/bin/sips', ['-s', 'format', 'jpeg', '-Z', '1280', raw, '--out', LOCAL_PHONE], {
-          timeout: 20_000,
-        })
-        await serial(() => sh('file', ['send', LOCAL_PHONE, PHONE_PHOTO_PATH]))
-        const info = await readFile(LOCAL_PHONE)
-        console.log(`[photo] 收到手机照片 ${size} 字节 → 已推送到模拟器（${info.length} 字节）`)
+        const sent = await deliverToEmulator(Buffer.concat(chunks))
+        console.log(`[photo] 收到手机照片 ${size} 字节 → 已推送到模拟器（${sent} 字节）`)
         res.writeHead(200, { 'content-type': 'application/json' })
-        res.end(JSON.stringify({ ok: true, received: size, sent: info.length }))
+        res.end(JSON.stringify({ ok: true, received: size, sent }))
       } catch (e) {
         lastError = String(e?.message ?? e).slice(0, 200)
         console.log(`[photo] 失败: ${lastError}`)
@@ -480,6 +523,28 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ ok: false, error: lastError }))
       }
     })
+    return
+  }
+
+  // 一键送达预设演示图（答辩时点一下就行）
+  if (url.pathname === '/demo' && req.method === 'POST') {
+    if (!authOk(url)) {
+      res.writeHead(403)
+      res.end('bad token')
+      return
+    }
+    try {
+      const buf = await readFile(DEMO_PHOTO)
+      const sent = await deliverToEmulator(buf)
+      console.log(`[demo] 预设演示图已送达（${sent} 字节）`)
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ ok: true, sent }))
+    } catch (e) {
+      lastError = String(e?.message ?? e).slice(0, 200)
+      console.log(`[demo] 失败: ${lastError}`)
+      res.writeHead(500, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ ok: false, error: lastError }))
+    }
     return
   }
 
@@ -501,6 +566,78 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
+  // ── 电脑摄像头：三个端点 ───────────────────────────────────────────
+  // Chrome 页面轮询「要不要画面」
+  if (url.pathname === '/webcam/want') {
+    if (url.searchParams.get('t') !== DEVICE_TOKEN) { res.writeHead(403); res.end('bad token'); return }
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+    res.end(JSON.stringify({ want: Date.now() - camWantAt < 20000 }))
+    return
+  }
+
+  // Chrome 页面把一帧推过来（内存保存，不落盘）
+  if (url.pathname === '/webcam/frame' && req.method === 'POST') {
+    if (url.searchParams.get('t') !== DEVICE_TOKEN) { res.writeHead(403); res.end('bad token'); return }
+    const chunks = []
+    let size = 0
+    req.on('data', (c) => { size += c.length; if (size <= 8 * 1024 * 1024) chunks.push(c) })
+    req.on('end', () => {
+      const buf = Buffer.concat(chunks)
+      if (buf.length > 1000 && buf[0] === 0xff && buf[1] === 0xd8) {
+        camFrame = { buf, ts: Date.now() }
+      }
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ ok: true }))
+    })
+    return
+  }
+
+  // 应用取图：请求一帧新鲜的电脑摄像头画面
+  if (url.pathname === '/capture.jpg') {
+    if (url.searchParams.get('t') !== DEVICE_TOKEN) { res.writeHead(403); res.end('bad token'); return }
+    camWantAt = Date.now()
+    const askedAt = camWantAt
+
+    // 没有活跃的 Chrome 取景页就拉起来（LaunchServices 启动才有相机权限）
+    const freshNow = camFrame && Date.now() - camFrame.ts < 5000
+    if (!freshNow && Date.now() - camLaunchedAt > 30000) {
+      camLaunchedAt = Date.now()
+      try {
+        await pexec('/usr/bin/open', [
+          '-na', 'Google Chrome', '--args',
+          `--user-data-dir=${CAM_CHROME_DIR}`,
+          '--no-first-run', '--no-default-browser-check',
+          '--use-fake-ui-for-media-stream',
+          CAM_PAGE(PORT),
+        ])
+        console.log('[webcam] 已用 LaunchServices 拉起 Chrome 取景页')
+      } catch (e) {
+        console.log(`[webcam] 拉起 Chrome 失败: ${String(e?.message ?? e).slice(0, 120)}`)
+      }
+    }
+
+    // 等一帧比「请求时刻」更新的画面
+    const deadline = Date.now() + 9000
+    while (Date.now() < deadline) {
+      if (camFrame && camFrame.ts >= askedAt && Date.now() - camFrame.ts < 3000) {
+        console.log(`[webcam] 取帧成功 ${camFrame.buf.length} 字节`)
+        res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store' })
+        res.end(camFrame.buf)
+        return
+      }
+      await new Promise((r) => setTimeout(r, 120))
+    }
+
+    const hint = camFrame
+      ? '电脑摄像头画面已过期 —— 让 Chrome 的「碳迹 · 电脑摄像头」窗口保持打开'
+      : '电脑摄像头还没连上 —— 请保持 Chrome 取景窗口打开（已尝试自动打开）'
+    lastError = hint
+    console.log(`[webcam] ${hint}`)
+    res.writeHead(503, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ ok: false, error: hint }))
+    return
+  }
+
   if (url.pathname === '/healthz') {
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end(
@@ -518,7 +655,9 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
-  if (!authOk(url)) {
+  // 取景页由 Chrome 打开，用设备令牌即可（只暴露页面本身，不含控制能力）
+  const isCamPage = url.pathname === '/cam.html' && url.searchParams.get('t') === DEVICE_TOKEN
+  if (!authOk(url) && !isCamPage) {
     res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' })
     res.end('需要令牌：请用启动时打印的完整链接访问。')
     return

@@ -32,16 +32,17 @@
   #stat{font-variant-numeric:tabular-nums;flex:0 0 auto}
   /* 拍照送达：按账本语言做成一条细线动作行，不是右上角的工具图标 */
   #shootRow{
-    flex:0 0 auto;padding:0 8px 8px;
+    flex:0 0 auto;display:flex;gap:6px;padding:0 8px 8px;
   }
-  #shoot{
-    width:100%;display:flex;align-items:center;
+  .demoBtn{
+    flex:1 1 0;min-width:0;display:flex;align-items:center;
     background:transparent;border:1px solid rgba(181,172,152,.34);
     border-radius:2px;color:var(--paper);
-    padding:11px 14px;font-family:inherit;
-    font-size:13px;letter-spacing:2px;cursor:pointer;
+    padding:11px 12px;font-family:inherit;
+    font-size:12.5px;letter-spacing:2px;cursor:pointer;
   }
-  #shootArrow{margin-left:auto;font-size:14px;letter-spacing:0}
+
+  .demoBtn .arrow{margin-left:auto;font-size:14px;letter-spacing:0}
   #shoot:active{border-color:var(--paper)}
   #shoot.busy{opacity:.5;pointer-events:none}
   #shootLabel{white-space:nowrap}
@@ -103,9 +104,13 @@
   </div>
 
   <div id="shootRow">
-    <button id="shoot">
-      <span id="shootLabel">拍 照 送 达</span>
-      <span id="shootArrow">⇢</span>
+    <button id="shoot" class="demoBtn">
+      <span>拍 照 送 达</span>
+      <span class="arrow">⇢</span>
+    </button>
+    <button id="demoBtn" class="demoBtn">
+      <span>演 示 图</span>
+      <span class="arrow">⇢</span>
     </button>
   </div>
 
@@ -282,7 +287,7 @@ camInput.addEventListener('change', async () => {
     const r = await fetch(`${BASE}/upload${q}`, { method: 'POST', body: f })
     const j = await r.json()
     if (j.ok) {
-      setState('on', '已送达 · 去应用里点「手机取图」')
+      setState('on', '已送达 · 在看板上点「手机取图」')
     } else {
       setState('err', '送达失败：' + (j.error ?? '未知'))
     }
@@ -291,6 +296,24 @@ camInput.addEventListener('change', async () => {
   } finally {
     shootBtn.classList.remove('busy')
     camInput.value = ''
+  }
+})
+
+// 一键送达预设演示图（答辩兜底：不用翻相册、不依赖现场光线）
+document.getElementById('demoBtn').addEventListener('click', async (ev) => {
+  const btn = ev.currentTarget
+  btn.classList.add('busy')
+  setState('on', '正在送达演示图…')
+  try {
+    const q = token() ? `?t=${encodeURIComponent(token())}` : ''
+    const r = await fetch(`${BASE}/demo${q}`, { method: 'POST' })
+    const j = await r.json()
+    if (j.ok) setState('on', '演示图已送达 · 在看板上点「手机取图」')
+    else setState('err', '送达失败：' + (j.error ?? '未知'))
+  } catch (e) {
+    setState('err', '送达失败：' + e.message)
+  } finally {
+    btn.classList.remove('busy')
   }
 })
 

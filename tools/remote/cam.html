@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>碳迹 · 电脑摄像头</title>
+<style>
+  html,body{margin:0;height:100%;background:#201D17;color:#F2EDE1;
+    font-family:-apple-system,"PingFang SC",sans-serif;overflow:hidden}
+  #wrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  video{max-width:100%;max-height:100%;display:none}
+  canvas{max-width:100%;max-height:100%;object-fit:contain}
+  #bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px;
+    font-size:12px;letter-spacing:.05em;background:rgba(32,29,23,.86);
+    border-top:1px solid rgba(181,172,152,.25)}
+  #st{color:#AB3A28}
+</style>
+</head>
+<body>
+<div id="wrap"><video id="v" playsinline muted autoplay></video><canvas id="c"></canvas></div>
+<div id="bar">碳迹 · 电脑摄像头 —— <span id="st">正在启动…</span></div>
+
+<script>
+// 这个页面由 bridge 用 LaunchServices 拉起（`open -na "Google Chrome"`）。
+// 必须由 LaunchServices 启动，Chrome 才是「责任进程」，
+// 才能用上它已获得的系统相机权限；从命令行 fork 出去的话会继承调用方
+// 的身份，而调用方（宿主 App）没有 camera entitlement，会直接被 TCC 拒绝。
+const TOKEN = new URLSearchParams(location.search).get('t') ?? ''
+const v = document.getElementById('v')
+const cv = document.getElementById('c')
+const st = document.getElementById('st')
+let ready = false
+let bus = false
+
+function say(t, err){ st.textContent = t; st.style.color = err ? '#AB3A28' : '#B5AC98' }
+
+async function start(){
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+    v.srcObject = s
+    await v.play()
+    ready = true
+    say('摄像头已就绪 · 等待应用取景')
+    requestAnimationFrame(tick)
+  } catch (e) {
+    say('打不开摄像头：' + (e && e.name ? e.name : e) + '（检查系统隐私设置）', true)
+    // 3 秒后重试一次，浏览器首次可能还在等权限
+    setTimeout(start, 3000)
+  }
+}
+
+// 持续把画面画到 canvas（本地预览），并按需把帧推给 bridge
+let lastPost = 0
+function tick(){
+  if (v.videoWidth) {
+    cv.width = v.videoWidth
+    cv.height = v.videoHeight
+    cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height)
+    // 只有 bridge 说「要一帧」的时候才上传，平时只做本地预览，不浪费流量
+    if (bus && Date.now() - lastPost > 120) {
+      lastPost = Date.now()
+      postFrame()
+    }
+  }
+  requestAnimationFrame(tick)
+}
+
+async function postFrame(){
+  try {
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.9))
+    if (!blob) return
+    await fetch(`/webcam/frame?t=${encodeURIComponent(TOKEN)}`, {
+      method: 'POST',
+      body: blob,
+      headers: { 'Content-Type': 'image/jpeg' }
+    })
+  } catch {}
+}
+
+// 轮询 bridge：需要取景吗
+async function poll(){
+  try {
+    const r = await fetch(`/webcam/want?t=${encodeURIComponent(TOKEN)}`, { cache: 'no-store' })
+    const j = await r.json()
+    bus = Boolean(j.want)
+    if (bus && ready) say('应用正在取景 · 保持这个窗口开着')
+    else if (ready) say('摄像头已就绪 · 等待应用取景')
+  } catch {}
+  setTimeout(poll, 400)
+}
+
+start()
+poll()
+</script>
+</body>
+</html>

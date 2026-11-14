@@ -16,7 +16,8 @@ import {
   ClassifyDetail,
   pickFromGallery,
   pickFromPhonePhoto,
-  releaseOcr
+  releaseOcr,
+  WEBCAM_CAPTURE_URL
 } from '../ai/LowCarbonClassifier';
 import {
   Bg, Brand, CatColor, Edge, FontSize, Ink, Radius, Rule, Seal, Semantic, Serif, Space, Weight,
@@ -172,7 +173,34 @@ export struct EntryPage {
     }
   }
 
-  /** 统一的识别 + 预填后处理（相册、手机取图共用一条管线） */
+  /**
+   * 电脑摄像头拍照 → 端侧识别。
+   *
+   * 模拟器没有相机应用，所以借用运行模拟器的那台电脑的摄像头：
+   * 电脑端抓一帧，应用取回后仍是**本机推理**，图片不上云端。
+   */
+  private async doAiRecognizeFromWebcam(): Promise<void> {
+    if (this.aiBusy) {
+      return;
+    }
+    this.aiBusy = true;
+    this.aiReason = '正在调用电脑摄像头…';
+    this.aiApplied = false;
+    try {
+      const pm: image.PixelMap | undefined = await pickFromPhonePhoto(WEBCAM_CAPTURE_URL);
+      if (pm === undefined) {
+        this.aiReason = '电脑摄像头没连上 —— 保持「碳迹 · 电脑摄像头」窗口打开（会自动尝试拉起）';
+        return;
+      }
+      await this.recognizePixelMap(pm);
+    } catch (e) {
+      this.aiReason = '电脑摄像头识别失败，请手动选择';
+    } finally {
+      this.aiBusy = false;
+    }
+  }
+
+  /** 统一的识别 + 预填后处理（相册、手机取图、电脑拍照共用一条管线） */
   private async recognizePixelMap(pm: image.PixelMap): Promise<void> {
     this.aiPreview = pm;
 
@@ -581,6 +609,28 @@ export struct EntryPage {
             .onClick(() => {
               if (!this.aiBusy) {
                 this.doAiRecognizeFromPhone();
+              }
+            })
+
+            // 模拟器没有相机应用：借用电脑摄像头，图片仍在本机推理
+            Row() {
+              Text('电 脑 拍 照')
+                .fontSize(13)
+                .letterSpacing(2)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L2)
+              Blank()
+              Text('◎')
+                .fontSize(14)
+                .fontColor(this.aiBusy ? Ink.L4 : Ink.L2)
+            }
+            .width('100%')
+            .height(44)
+            .padding({ left: 14, right: 14 })
+            .border({ width: 1, color: Rule.HAIR, radius: Radius.XS })
+            .margin({ top: 8 })
+            .onClick(() => {
+              if (!this.aiBusy) {
+                this.doAiRecognizeFromWebcam();
               }
             })
 

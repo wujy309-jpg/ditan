@@ -141,6 +141,14 @@ export async function takePhoto(ctx: common.UIAbilityContext): Promise<image.Pix
  */
 export const PHONE_PHOTO_URL: string = 'http://10.0.2.2:8899/latest.jpg?t=carbon-dev';
 
+/**
+ * 电脑摄像头抓拍地址。
+ *
+ * 模拟器里没有相机应用（com.huawei.hmos.camera 不存在），所以「拍照」这一步
+ * 交给运行模拟器的那台电脑：电脑端调用本机摄像头抓一帧，应用取回来**本地推理**。
+ */
+export const WEBCAM_CAPTURE_URL: string = 'http://10.0.2.2:8899/capture.jpg?t=carbon-dev';
+
 /** 从电脑取手机刚拍的那张照片；没有照片、网络不通都返回 undefined */
 export async function pickFromPhonePhoto(
   url: string = PHONE_PHOTO_URL
