@@ -620,6 +620,7 @@ const server = http.createServer(async (req, res) => {
     const deadline = Date.now() + 9000
     while (Date.now() < deadline) {
       if (camFrame && camFrame.ts >= askedAt && Date.now() - camFrame.ts < 3000) {
+        lastError = '' // 取帧成功就把上一次的错误清掉，避免 healthz 残留过期状态
         console.log(`[webcam] 取帧成功 ${camFrame.buf.length} 字节`)
         res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store' })
         res.end(camFrame.buf)
